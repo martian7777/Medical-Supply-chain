@@ -9,13 +9,15 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      # v5 majors run on Node 24; the v4 line is on the deprecated Node 20 runtime.
+      - uses: actions/checkout@v5
 
+      # No `version:` here on purpose. package.json's "packageManager" field is the
+      # single source of truth for the pnpm version; specifying it in both places makes
+      # action-setup fail outright with ERR_PNPM_BAD_PM_VERSION.
       - uses: pnpm/action-setup@v4
-        with:
-          version: 9
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: pnpm
@@ -25,6 +27,11 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
+      # Only the pure domain rules run here. The integration suite (tests/flow.test.ts)
+      # skips itself without a DATABASE_URL, and we deliberately do not give CI one:
+      # a shared cloud database that every branch writes to would be flaky, and putting
+      # the service-role key into Actions secrets widens the blast radius of the single
+      # worst credential in this system for no real gain.
       - name: Domain rules
         run: pnpm test
 
@@ -32,16 +39,16 @@ jobs:
         run: pnpm build
         env:
           # Build-time only: the app must compile without real credentials, which also
-          # proves no module is reaching for a live database at import time.
+          # proves no module reaches for a live database at import time.
           NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
           NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder
 
-  # Fails the build if a service-role key is ever committed. The single worst
-  # secret to leak in this system — it bypasses every RLS policy we wrote.
+  # Fails the build if a service-role key is ever committed. The single worst secret to
+  # leak here — it bypasses every RLS policy we wrote.
   secrets:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
       - uses: gitleaks/gitleaks-action@v2
