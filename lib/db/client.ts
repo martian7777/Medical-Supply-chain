@@ -16,9 +16,18 @@ import postgres from "postgres";
  *   - Transaction mode does not support prepared statements, hence `prepare: false`.
  *     Leaving it on produces intermittent, maddening "prepared statement already
  *     exists" errors under concurrency.
- *   - `max: 1` per invocation: the pooling is Supavisor's job, not ours.
+ *   - `max: 4` — small, but NOT 1.
  *
- * Spike (d) exists to prove this configuration actually holds under concurrency.
+ * That last point cost an afternoon. `max: 1` looks right ("let Supavisor do the
+ * pooling"), and it is fine for sequential queries. But a page that fires several
+ * queries at once — the government console runs six in a Promise.all — makes postgres.js
+ * PIPELINE them down the single connection, and Supavisor in transaction mode does not
+ * handle pipelined extended-protocol queries. It does not error; it simply stalls. The
+ * console took over 30 seconds to render and every individual query measured 100ms.
+ *
+ * A handful of connections lets concurrent queries take separate pooler sessions, which
+ * is what the pooler is for. Keep the number small — this multiplies across serverless
+ * invocations.
  */
 
 declare global {
@@ -40,7 +49,7 @@ function connectionString(): string {
 export const sql: postgres.Sql =
   globalThis.__mswp_sql ??
   postgres(connectionString(), {
-    max: 1,
+    max: 4,
     prepare: false,
     idle_timeout: 20,
     connect_timeout: 10,

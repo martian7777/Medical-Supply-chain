@@ -1,0 +1,10 @@
+[
+  {
+    "date": "2026-07-13",
+    "macrostructure": "app-scope (operator consoles) + single-purpose trust page",
+    "theme": "Cobalt",
+    "theme_axes": "cool-light / grotesk-sans / electric-cobalt",
+    "enrichment": "none — typography, hairlines, and server-rendered QR SVG",
+    "brief": "MSWP — pharma supply-chain console (gov/manufacturer/pharmacy) + public medicine verification page"
+  }
+]

@@ -126,10 +126,14 @@ export async function prolongLicense(
   });
 }
 
-/** Government sees every licence; a manufacturer sees only its own. PRD B.1/B.2. */
+/**
+ * Government sees every licence; a manufacturer sees only its own. PRD B.1/B.2.
+ *
+ * No step-up here. MFA guards ACTIONS with blast radius — revoking a licence, onboarding
+ * an organization — not the act of looking at a table you are already authorised to see.
+ * Requiring it to read would lock a regulator out of their own console.
+ */
 export async function listLicenses(actor: Actor) {
-  assertStepUpIfPrivileged(actor);
-
   const rows = await sql<
     (LicenseRow & { drug_name: string; manufacturer_name: string })[]
   >`

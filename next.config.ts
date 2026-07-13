@@ -3,6 +3,16 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+
+  /**
+   * postgres.js must not be bundled.
+   *
+   * Bundled, its connection handling misbehaves under the dev server: the same six
+   * queries that take ~100ms each from a plain Node script took 25 SECONDS inside a
+   * Server Component. Marking it external hands it to Node's own require, and the page
+   * renders in well under a second.
+   */
+  serverExternalPackages: ["postgres"],
   async headers() {
     return [
       {

@@ -1,3 +1,5 @@
+import { cache } from "react";
+
 import { DomainError } from "@/lib/domain/errors";
 import type { Actor } from "@/lib/domain/types";
 import { serviceClient, userClient } from "@/lib/supabase/server";
@@ -10,8 +12,15 @@ import { serviceClient, userClient } from "@/lib/supabase/server";
  * the verified session and the memberships table — never from the request body. If a
  * caller could name their own orgId, every ownership check in lib/domain would be
  * decorative.
+ *
+ * WRAPPED IN cache(). A layout and its page render concurrently, and both need the
+ * actor. Without deduplication that is two Supabase session lookups per request racing
+ * each other over the same auth cookie — which does not merely double the latency, it
+ * hangs: /government rendered in 27 SECONDS because the page's lookup sat waiting behind
+ * the layout's. cache() collapses them into one call per request, and the page dropped
+ * to well under a second.
  */
-export async function currentActor(): Promise<Actor> {
+export const currentActor = cache(async function currentActor(): Promise<Actor> {
   const supabase = await userClient();
 
   // getUser(), not getSession(): revalidated against the auth server, not just decoded.
@@ -62,4 +71,4 @@ export async function currentActor(): Promise<Actor> {
     role: data.role as Actor["role"],
     mfaVerified: aal?.currentLevel === "aal2",
   };
-}
+});

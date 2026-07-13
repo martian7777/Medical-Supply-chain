@@ -1,0 +1,98 @@
+/* Hallmark · genre: modern-minimal · theme: Cobalt · scope: app + public page
+ * paper-band: cool-light · display-style: grotesk-sans · accent-hue: electric-cobalt
+ *
+ * The portable token system. app/globals.css imports this; nothing in the app may
+ * reference a raw colour or font — every value comes through a name here.
+ */
+
+:root {
+  /* ---- Paper and ink -----------------------------------------------------
+   * Never #fff, never #000. A cool engineered near-white; cool charcoal ink.
+   * Pure black/white read flat and synthetic on a screen someone stares at all day.
+   */
+  --color-paper: oklch(98.5% 0.004 250);
+  --color-paper-2: oklch(96.5% 0.005 250); /* sunken rows, table headers */
+  --color-paper-3: oklch(94% 0.006 252); /* hover */
+  --color-ink: oklch(24% 0.02 258); /* headings */
+  --color-ink-2: oklch(34% 0.018 257); /* body */
+  --color-ink-3: oklch(56% 0.014 256); /* meta, muted */
+
+  /* Hairlines carry the structure. No boxed cards, no drop shadows. */
+  --color-rule: oklch(90% 0.006 252);
+  --color-rule-2: oklch(84% 0.008 254);
+
+  /* ---- The one signal ----------------------------------------------------
+   * Electric cobalt. Under 5% of any viewport: the primary button, focus rings,
+   * the active nav item, a link's hover underline. Never a flood, never a gradient.
+   */
+  --color-accent: oklch(58% 0.2 256);
+  --color-accent-ink: oklch(99% 0.002 250); /* text ON accent */
+  --color-accent-weak: oklch(94% 0.04 256); /* accent-tinted surface */
+
+  /* ---- Status ------------------------------------------------------------
+   * Status is NEVER carried by colour alone — every chip pairs hue with a text
+   * label, because ~8% of men cannot separate the green from the red.
+   */
+  --color-ok: oklch(52% 0.13 155);
+  --color-ok-weak: oklch(94% 0.04 155);
+  --color-warn: oklch(62% 0.14 75);
+  --color-warn-weak: oklch(95% 0.05 85);
+  --color-danger: oklch(55% 0.19 25);
+  --color-danger-weak: oklch(94% 0.04 25);
+
+  /* The single dark beat: the graphite band on the public page. */
+  --color-graphite: oklch(22% 0.016 260);
+  --color-graphite-ink: oklch(92% 0.01 254);
+
+  /* ---- Type --------------------------------------------------------------
+   * Three faces, three jobs. Mono is not decoration here: unit UUIDs, lot numbers
+   * and quantities must align vertically to be scannable, and a proportional font
+   * cannot do that.
+   */
+  --font-display: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
+  --font-body: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, "SF Mono", monospace;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-base: 0.9375rem;
+  --text-lg: 1.0625rem;
+  --text-xl: 1.375rem;
+  --text-2xl: 1.75rem;
+  --text-3xl: 2.25rem;
+  /* The public verdict. It is the largest thing in the system on purpose —
+   * it is read at arm's length, in a shop, in bad light. */
+  --text-verdict: clamp(2.25rem, 9vw + 0.5rem, 3.75rem);
+
+  /* ---- Space (4pt scale) -------------------------------------------------- */
+  --space-2xs: 0.25rem;
+  --space-xs: 0.5rem;
+  --space-sm: 0.75rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2rem;
+  --space-2xl: 3rem;
+  --space-3xl: 4.5rem;
+
+  /* ---- Form -------------------------------------------------------------- */
+  --radius-sm: 4px;
+  --radius: 6px; /* drawn with a ruler, not a pill */
+  --radius-lg: 10px;
+
+  /* ---- Motion ------------------------------------------------------------
+   * Three easings, no bounce. Overshoot on UI state is a decade-old tell.
+   */
+  --dur-instant: 80ms;
+  --dur-short: 140ms;
+  --dur-med: 240ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ---- Layers ------------------------------------------------------------- */
+  --z-base: 0;
+  --z-sticky: 10;
+  --z-nav: 20;
+  --z-overlay: 30;
+  --z-toast: 40;
+}

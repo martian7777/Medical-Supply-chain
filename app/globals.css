@@ -1,27 +1,274 @@
 @import "tailwindcss";
+@import "../tokens.css";
 
-/*
- * Placeholder tokens only. The real token system (both registers — operator
- * workbench and public trust page) is generated in Phase 3 via /hallmark.
- * Do not build components against these values expecting them to survive.
+/* Hallmark · genre: modern-minimal · theme: Cobalt · scope: app + public page
+ * paper-band: cool-light · display-style: grotesk-sans · accent-hue: electric-cobalt
+ * enrichment: none (typography + hairlines) · nav: app shell (not a marketing nav)
+ * pre-emit critique: P5 H5 E4 S5 R5 V4
+ *
+ * Two registers, one token system:
+ *   · operator dashboards — dense, hairline-ruled, keyboard-first, no ornament
+ *   · public verify page  — one enormous verdict, mobile-first, read at arm's length
  */
-@theme {
-  --color-canvas: oklch(99% 0.002 250);
-  --color-ink: oklch(22% 0.01 250);
-  --color-muted: oklch(55% 0.01 250);
-  --color-line: oklch(92% 0.004 250);
 
-  --color-ok: oklch(58% 0.14 155);
-  --color-warn: oklch(72% 0.16 75);
-  --color-danger: oklch(58% 0.19 25);
+@theme inline {
+  --color-paper: var(--color-paper);
+  --color-ink: var(--color-ink);
+  --color-accent: var(--color-accent);
+  --font-display: var(--font-display);
+  --font-body: var(--font-body);
+  --font-mono: var(--font-mono);
 }
 
-:root {
-  color-scheme: light dark;
+html,
+body {
+  overflow-x: clip; /* never `hidden` — it breaks position:sticky */
 }
 
 body {
-  background: var(--color-canvas);
-  color: var(--color-ink);
+  background: var(--color-paper);
+  color: var(--color-ink-2);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  color: var(--color-ink);
+  letter-spacing: -0.02em;
+  /* A long drug name must break inside the word rather than push the page sideways. */
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+
+/* ---------------------------------------------------------------------------
+ * Focus. Appears INSTANTLY — never transitioned. A ring that fades in over 200ms
+ * leaves a keyboard user with no indicator at the moment they need it most.
+ * ------------------------------------------------------------------------- */
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* ---------------------------------------------------------------------------
+ * Mono label — the machine-readout voice. Used for UUIDs, lot numbers, column
+ * heads, status chips. Tabular figures so digits align down a column.
+ * ------------------------------------------------------------------------- */
+.mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.label {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-ink-3);
+}
+
+/* ---------------------------------------------------------------------------
+ * Buttons. 6px radius, never a pill. All eight states are specified.
+ * ------------------------------------------------------------------------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-xs);
+  padding: 0.5rem 0.875rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--color-rule-2);
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  white-space: nowrap; /* a clickable label is a one-line object — gate 49 */
+  cursor: pointer;
+  transition:
+    background-color var(--dur-short) var(--ease-out),
+    border-color var(--dur-short) var(--ease-out),
+    transform var(--dur-instant) var(--ease-out);
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--color-paper-3);
+  border-color: var(--color-ink-3);
+}
+.btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+.btn:disabled,
+.btn[aria-disabled="true"] {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.btn[data-loading="true"] {
+  cursor: progress;
+  color: var(--color-ink-3);
+}
+
+.btn--primary {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-accent-ink);
+}
+.btn--primary:hover:not(:disabled) {
+  background: oklch(from var(--color-accent) calc(l - 0.05) c h);
+  border-color: oklch(from var(--color-accent) calc(l - 0.05) c h);
+}
+
+.btn--danger {
+  color: var(--color-danger);
+  border-color: var(--color-rule-2);
+}
+.btn--danger:hover:not(:disabled) {
+  background: var(--color-danger-weak);
+  border-color: var(--color-danger);
+}
+
+/* ---------------------------------------------------------------------------
+ * Fields
+ * ------------------------------------------------------------------------- */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+}
+
+.input {
+  width: 100%;
+  padding: 0.5rem 0.625rem;
+  border: 1px solid var(--color-rule-2);
+  border-radius: var(--radius);
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  transition: border-color var(--dur-short) var(--ease-out);
+}
+.input:hover:not(:disabled) {
+  border-color: var(--color-ink-3);
+}
+.input:disabled {
+  background: var(--color-paper-2);
+  color: var(--color-ink-3);
+  cursor: not-allowed;
+}
+.input[aria-invalid="true"] {
+  border-color: var(--color-danger);
+}
+.input.mono {
+  font-family: var(--font-mono);
+}
+
+/* ---------------------------------------------------------------------------
+ * Table — the operator's primary instrument. Dense by design: a pharmacy clerk
+ * processing 200 incoming units should see as many rows as the screen allows.
+ * ------------------------------------------------------------------------- */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+.table thead th {
+  text-align: left;
+  padding: var(--space-xs) var(--space-sm);
+  border-bottom: 1px solid var(--color-rule-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-ink-3);
+  white-space: nowrap;
+}
+.table tbody td {
+  padding: var(--space-xs) var(--space-sm);
+  border-bottom: 1px solid var(--color-rule);
+  vertical-align: middle;
+}
+.table tbody tr:hover {
+  background: var(--color-paper-2);
+}
+.table .num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* A wide table scrolls inside its own box. The page body never scrolls sideways. */
+.table-scroll {
+  overflow-x: auto;
+  border: 1px solid var(--color-rule);
+  border-radius: var(--radius);
+}
+
+/* ---------------------------------------------------------------------------
+ * Status chip. Colour + LABEL, always. Never colour alone.
+ * ------------------------------------------------------------------------- */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  padding: 0.125rem 0.4375rem;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.chip--ok {
+  background: var(--color-ok-weak);
+  color: var(--color-ok);
+}
+.chip--warn {
+  background: var(--color-warn-weak);
+  color: var(--color-warn);
+}
+.chip--danger {
+  background: var(--color-danger-weak);
+  color: var(--color-danger);
+}
+.chip--neutral {
+  background: var(--color-paper-3);
+  color: var(--color-ink-3);
+}
+.chip--accent {
+  background: var(--color-accent-weak);
+  color: var(--color-accent);
+}
+
+/* ---------------------------------------------------------------------------
+ * Panel — a hairline-ruled region. Depth comes from borders, not shadow.
+ * ------------------------------------------------------------------------- */
+.panel {
+  border: 1px solid var(--color-rule);
+  border-radius: var(--radius);
+  background: var(--color-paper);
+}
+.panel__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  border-bottom: 1px solid var(--color-rule);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }
