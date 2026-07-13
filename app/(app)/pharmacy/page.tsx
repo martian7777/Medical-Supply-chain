@@ -1,13 +1,14 @@
-import { ActionForm, Field } from "@/components/action-form";
-import { RowAction } from "@/components/row-action";
+import { DispenseForm } from "@/components/dispense-form";
+import { ConfirmAction } from "@/components/modal";
 import { Chip, Empty, Panel, UnitStatus, Uuid } from "@/components/ui";
 import { currentActor } from "@/lib/auth/actor";
 import { listInventory } from "@/lib/services/dispense";
-import { listShipments } from "@/lib/services/shipments";
+import { listShipments, listShipmentUnits } from "@/lib/services/shipments";
 
 import {
   acceptShipmentAction,
   dispenseAction,
+  partiallyAcceptShipmentAction,
   rejectShipmentAction,
 } from "../actions";
 
@@ -25,6 +26,18 @@ export default async function PharmacyConsole() {
   const awaiting = inbox.filter((s) => s.status === "dispatched");
   const expiring = inventory.filter((u) => u.expired);
 
+  // The unit-by-unit pick list, but only for consignments that can still be resolved.
+  // Fetching lines for every shipment ever received would be a query per row for data
+  // nobody can act on.
+  const lines = new Map(
+    await Promise.all(
+      awaiting.map(
+        async (s) =>
+          [s.shipmentId, await listShipmentUnits(actor, s.shipmentId)] as const,
+      ),
+    ),
+  );
+
   return (
     <>
       <div>
@@ -37,21 +50,7 @@ export default async function PharmacyConsole() {
       {/* Dispensing sits at the top: it is the thing done a hundred times a day, and it
           should be reachable without scrolling past anything. */}
       <Panel title="Dispense a unit">
-        <ActionForm action={dispenseAction} submitLabel="Dispense">
-          <Field
-            label="Unit code"
-            hint="Scan the QR on the box, or type the code. Nothing about the customer is recorded."
-          >
-            <input
-              name="unitId"
-              className="input mono"
-              required
-              autoFocus
-              placeholder="550e8400-e29b-41d4-a716-446655440000"
-              pattern="[0-9a-fA-F-]{36}"
-            />
-          </Field>
-        </ActionForm>
+        <DispenseForm action={dispenseAction} />
       </Panel>
 
       <Panel
@@ -119,18 +118,91 @@ export default async function PharmacyConsole() {
                             flexWrap: "wrap",
                           }}
                         >
-                          <RowAction
+                          <ConfirmAction
                             action={acceptShipmentAction}
-                            label="Accept all"
-                            variant="btn--primary"
+                            trigger="Accept all"
+                            triggerVariant="btn--primary"
+                            title="Accept the whole consignment?"
+                            body={`All ${s.unitCount} unit${s.unitCount === 1 ? "" : "s"} from ${s.counterparty} become yours, and you become answerable for them. Only accept what you have physically counted.`}
+                            confirmLabel="Accept all"
                             fields={{ shipmentId: s.shipmentId }}
                           />
-                          <RowAction
+
+                          {/* Some arrived, some did not — the case the domain layer has
+                              always supported and the UI never let anyone express. */}
+                          <ConfirmAction
+                            action={partiallyAcceptShipmentAction}
+                            trigger="Accept some…"
+                            title="Which units actually arrived?"
+                            body="Tick only the units you have in your hands. Everything left unticked goes back to the sender, and the discrepancy is recorded against this consignment."
+                            confirmLabel="Accept ticked units"
+                            fields={{ shipmentId: s.shipmentId }}
+                          >
+                            <div className="modal__list">
+                              {(lines.get(s.shipmentId) ?? []).map((u) => (
+                                <label key={u.unitId} className="modal__pick">
+                                  <input
+                                    type="checkbox"
+                                    name="acceptedUnitIds"
+                                    value={u.unitId}
+                                    defaultChecked
+                                  />
+                                  <span
+                                    className="mono"
+                                    style={{ fontSize: "var(--text-xs)" }}
+                                  >
+                                    {u.unitId.slice(0, 8)}…{u.unitId.slice(-4)}
+                                  </span>
+                                  <span style={{ color: "var(--color-ink-3)" }}>
+                                    {u.drugName} · {u.lotNo}
+                                  </span>
+                                </label>
+                              ))}
+                            </div>
+                            <label className="field">
+                              <span
+                                style={{ fontSize: "var(--text-sm)", fontWeight: 500 }}
+                              >
+                                What was wrong?
+                              </span>
+                              <input
+                                name="note"
+                                className="input"
+                                maxLength={500}
+                                placeholder="Short by 4 boxes; carton 3 crushed"
+                              />
+                            </label>
+                          </ConfirmAction>
+
+                          <ConfirmAction
                             action={rejectShipmentAction}
-                            label="Reject"
-                            variant="btn--danger"
+                            trigger="Reject"
+                            triggerVariant="btn--danger"
+                            title="Reject the whole consignment?"
+                            body={`All ${s.unitCount} unit${s.unitCount === 1 ? "" : "s"} go back to ${s.counterparty}, who owns them and always did. Nothing enters your inventory.`}
+                            confirmLabel="Reject consignment"
+                            confirmVariant="btn--danger"
                             fields={{ shipmentId: s.shipmentId }}
-                          />
+                          >
+                            {/* This field is why the dialog exists. rejectShipmentAction
+                                has always read a `note`, but the old row button posted
+                                only the shipment id — so every rejection reason the page
+                                promised to record was silently the empty string. */}
+                            <label className="field">
+                              <span
+                                style={{ fontSize: "var(--text-sm)", fontWeight: 500 }}
+                              >
+                                Reason
+                              </span>
+                              <input
+                                name="note"
+                                className="input"
+                                required
+                                maxLength={500}
+                                placeholder="Never arrived; seal broken; wrong drug"
+                              />
+                            </label>
+                          </ConfirmAction>
                         </div>
                       ) : null}
                     </td>

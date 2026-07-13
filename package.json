@@ -17,6 +17,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "node --env-file=.env --import tsx scripts/migrate.ts",
     "db:seed": "node --env-file=.env --import tsx scripts/seed.ts",
+    "fixture:pending": "node --env-file=.env --import tsx scripts/pending-fixture.ts",
     "spike": "node --env-file=.env --import tsx scripts/spike.ts",
     "spike:purge": "node --env-file=.env --import tsx scripts/purge-spike.ts",
     "perf": "node --env-file=.env --import tsx scripts/perf.ts",

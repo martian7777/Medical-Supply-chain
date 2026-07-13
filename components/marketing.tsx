@@ -41,6 +41,9 @@ export function MarketingNav() {
         </nav>
 
         <div className="mkt-nav__right">
+          <Link href="/signup" className="btn">
+            Register
+          </Link>
           <Link href="/login" className="btn">
             Sign in
           </Link>

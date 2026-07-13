@@ -24,14 +24,19 @@ const PUBLIC_PATHS = [
   "/",
   "/verify",
   "/login",
-  "/auth",
+  "/auth", // the callback that turns an emailed code into a session
+  "/forgot-password",
   "/access",
-  "/signup", // legacy path; redirects to /access
+  "/signup",
   "/about",
   "/contact",
   "/privacy",
   "/terms",
 ];
+
+// NOT public: /reset-password. Reaching it means /auth/callback already exchanged the
+// emailed code for a session, so the guard below is exactly the check that page needs —
+// no session, no password change.
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });

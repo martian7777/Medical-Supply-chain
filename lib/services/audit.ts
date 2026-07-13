@@ -16,6 +16,8 @@ import type { Actor } from "@/lib/domain/types";
 
 export type AuditAction =
   | "organization.registered"
+  | "organization.approved"
+  | "organization.rejected"
   | "drug_type.created"
   | "license.issued"
   | "license.revoked"
@@ -25,7 +27,9 @@ export type AuditAction =
   | "shipment.accepted"
   | "shipment.rejected"
   | "shipment.partially_accepted"
-  | "unit.dispensed";
+  | "unit.dispensed"
+  | "member.invited"
+  | "member.removed";
 
 /** What may be recorded in an audit payload. Deliberately JSON-shaped, not `unknown`. */
 export type AuditPayload = Record<string, postgres.JSONValue>;

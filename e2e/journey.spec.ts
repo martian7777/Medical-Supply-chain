@@ -142,18 +142,38 @@ test("Gov → Manufacturer → Pharmacy → public verification", async ({ page 
 
   await page.screenshot({ path: "e2e/__shots__/4-pharmacy-inbox.png", fullPage: true });
 
+  // Taking custody is confirmed, not clicked: the trigger opens a dialog that states
+  // what accepting means, and the button that actually posts lives inside it.
   await page.getByRole("button", { name: "Accept all" }).first().click();
-  await expect(page.getByText("The units are now yours.")).toBeVisible();
+  const acceptDialog = page.getByRole("dialog");
+  await expect(acceptDialog).toBeVisible();
+  await acceptDialog.getByRole("button", { name: "Accept all" }).click();
+
+  // Custody has moved, and the row says so. We assert the chip rather than a success
+  // toast on purpose: accepting removes the very buttons that were clicked, so any
+  // message rendered beside them unmounts with them. The table IS the receipt.
+  await expect(page.getByText("awaiting you")).toBeHidden();
+  await expect(page.getByRole("row", { name: /accepted/ }).first()).toBeVisible();
 
   const dispensed = shipping[0]!;
   await page.getByLabel("Unit code").fill(dispensed);
   await page.getByRole("button", { name: "Dispense", exact: true }).click();
+
+  // The code is echoed back before it is burned — the whole point of the dialog.
+  const dispenseDialog = page.getByRole("dialog");
+  await expect(dispenseDialog.getByText(dispensed)).toBeVisible();
+  await page.screenshot({ path: "e2e/__shots__/5-dispense-confirm.png", fullPage: true });
+  await dispenseDialog.getByRole("button", { name: "Yes — dispense it" }).click();
   await expect(page.getByText(/can never be dispensed again/)).toBeVisible();
 
-  // The cloned-code catch, in the UI.
+  // The cloned-code catch, in the UI. The refusal must surface INSIDE the dialog and
+  // leave it open — closing on a domain error would throw the only useful sentence away.
   await page.getByLabel("Unit code").fill(dispensed);
   await page.getByRole("button", { name: "Dispense", exact: true }).click();
-  await expect(page.getByText(/already been dispensed/)).toBeVisible();
+  await page.getByRole("dialog").getByRole("button", { name: "Yes — dispense it" }).click();
+  await expect(
+    page.getByRole("dialog").getByText(/already been dispensed/),
+  ).toBeVisible();
 
   await page.screenshot({ path: "e2e/__shots__/5-pharmacy-double-dispense.png", fullPage: true });
   await signOut(page);

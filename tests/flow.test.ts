@@ -42,11 +42,24 @@ async function mkOrg(type: string, name: string) {
   return o!.org_id;
 }
 
-const admin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
-  process.env.SUPABASE_SERVICE_ROLE_KEY ?? "",
-  { auth: { persistSession: false, autoRefreshToken: false } },
-);
+/**
+ * Built on first use, never at module scope.
+ *
+ * createClient() throws outright on an empty URL, and a `describe.skipIf` cannot save a
+ * file that has already blown up while being imported — the skip is evaluated after the
+ * module body runs. So in CI, where there are no credentials, an eager client here fails
+ * the whole suite that is supposed to be skipping itself. (lib/db/client.ts is lazy for
+ * exactly the same reason.)
+ */
+let adminClient: ReturnType<typeof createClient> | undefined;
+function admin() {
+  adminClient ??= createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
+    process.env.SUPABASE_SERVICE_ROLE_KEY ?? "",
+    { auth: { persistSession: false, autoRefreshToken: false } },
+  );
+  return adminClient;
+}
 
 const createdUserIds: string[] = [];
 // Two manufacturers exist in this scenario, so org type + role is not a unique name.
@@ -67,7 +80,7 @@ async function mkActor(
 ): Promise<Actor> {
   const email = `${orgType}-${role}-${++actorSeq}-${stamp}@flow.test`;
 
-  const { data, error } = await admin.auth.admin.createUser({
+  const { data, error } = await admin().auth.admin.createUser({
     email,
     password: `Flow-${stamp}!`,
     email_confirm: true,
@@ -126,7 +139,7 @@ describe.skipIf(!hasDb)("full supply-chain journey", () => {
     await sql`delete from organizations where name like ${`%${stamp} (flow)`}`;
 
     for (const id of createdUserIds) {
-      await admin.auth.admin.deleteUser(id).catch(() => {});
+      await admin().auth.admin.deleteUser(id).catch(() => {});
     }
     await sql.end();
   });

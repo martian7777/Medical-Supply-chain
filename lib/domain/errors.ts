@@ -10,6 +10,11 @@
 export type DomainErrorCode =
   | "UNAUTHENTICATED"
   | "FORBIDDEN"
+  // Signed in, correctly attached to an organisation — but that organisation has
+  // registered itself and no regulator has approved it yet. Distinct from FORBIDDEN
+  // because the answer is "wait", not "you may not", and the UI must not bounce these
+  // people back to a login form they have already passed.
+  | "ORG_PENDING"
   | "NOT_FOUND"
   | "INVALID_INPUT"
   | "LICENSE_INVALID"
@@ -37,6 +42,8 @@ export const httpStatusFor: Record<DomainErrorCode, number> = {
   // Deliberately 404, not 403: telling an attacker "this exists but isn't yours"
   // confirms the resource exists. Refusals about other orgs' data look like absence.
   FORBIDDEN: 404,
+  // A real 403: the caller is who they say they are, and is simply not cleared yet.
+  ORG_PENDING: 403,
   NOT_FOUND: 404,
   INVALID_INPUT: 400,
   LICENSE_INVALID: 422,

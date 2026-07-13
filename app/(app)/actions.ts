@@ -13,7 +13,9 @@ import {
   registerOrganization,
   revokeLicense,
 } from "@/lib/services/licenses";
+import { inviteMember, removeMember } from "@/lib/services/members";
 import { dispatchShipment, resolveShipment } from "@/lib/services/shipments";
+import { approveOrganization, rejectOrganization } from "@/lib/services/signup";
 
 /**
  * Server actions — the dashboards' write path.
@@ -158,10 +160,69 @@ export async function rejectShipmentAction(_: ActionState, fd: FormData) {
   );
 }
 
+/**
+ * Accept only what actually turned up.
+ *
+ * The checkbox list posts one `acceptedUnitIds` entry per ticked unit, so an empty
+ * selection is a rejection of the whole consignment and a full one is a plain
+ * acceptance — `resolveShipment` already derives which of the three it was.
+ */
+export async function partiallyAcceptShipmentAction(_: ActionState, fd: FormData) {
+  const actor = await currentActor();
+  const acceptedUnitIds = fd
+    .getAll("acceptedUnitIds")
+    .map((v) => String(v))
+    .filter(Boolean);
+
+  return run(
+    () =>
+      resolveShipment(actor, str(fd, "shipmentId"), {
+        acceptedUnitIds,
+        note: str(fd, "note") || undefined,
+      }),
+    acceptedUnitIds.length === 0
+      ? "Nothing was accepted. The whole consignment returned to the sender."
+      : `Accepted ${acceptedUnitIds.length} unit${acceptedUnitIds.length === 1 ? "" : "s"}. The rest returned to the sender.`,
+  );
+}
+
 export async function dispenseAction(_: ActionState, fd: FormData) {
   const actor = await currentActor();
   return run(
     () => dispenseUnit(actor, str(fd, "unitId")),
     "Dispensed. This code can never be dispensed again.",
+  );
+}
+
+export async function approveOrgAction(_: ActionState, fd: FormData) {
+  const actor = await currentActor();
+  return run(
+    () => approveOrganization(actor, str(fd, "orgId")),
+    "Approved. They can now sign in and act in the chain.",
+  );
+}
+
+export async function rejectOrgAction(_: ActionState, fd: FormData) {
+  const actor = await currentActor();
+  return run(
+    () => rejectOrganization(actor, str(fd, "orgId"), str(fd, "note") || undefined),
+    "Rejected. They cannot act, and are told so when they sign in.",
+  );
+}
+
+export async function inviteMemberAction(_: ActionState, fd: FormData) {
+  const actor = await currentActor();
+  const email = str(fd, "email");
+  return run(
+    () => inviteMember(actor, { email, role: str(fd, "role") }),
+    `Invitation sent to ${email}. They choose their own password from the link.`,
+  );
+}
+
+export async function removeMemberAction(_: ActionState, fd: FormData) {
+  const actor = await currentActor();
+  return run(
+    () => removeMember(actor, str(fd, "userId")),
+    "Removed. They can no longer sign in to this organization.",
   );
 }

@@ -53,9 +53,18 @@ export const currentActor = cache(async function currentActor(): Promise<Actor> 
 
   const org = data.organizations as unknown as {
     type: Actor["orgType"];
-    status: "active" | "suspended";
+    status: "pending" | "active" | "suspended";
   };
 
+  // A self-registered organisation is a claim, not a seat. Until the regulator approves
+  // it, no Actor exists for it — which means every ownership check, licence rule and API
+  // route downstream refuses it without having to know that signup exists at all.
+  if (org.status === "pending") {
+    throw new DomainError(
+      "ORG_PENDING",
+      "your organization is awaiting approval by the regulator",
+    );
+  }
   if (org.status !== "active") {
     throw new DomainError("FORBIDDEN", "your organization is suspended");
   }

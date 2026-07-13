@@ -9,10 +9,10 @@ export const metadata = {
 };
 
 /**
- * Sign-in. There is no sign-up: Government registers an organisation and invites its
- * first admin, who invites their staff. A self-serve registration form would let
- * anyone create an account with no organisation, which is a role we deliberately
- * have no seat for. /access explains this to anyone who goes looking.
+ * Sign-in. Two kinds of person arrive here: an administrator who registered their
+ * organisation at /signup and is waiting to be approved, and a member of staff who was
+ * invited into an organisation that already exists. Nobody has an account that belongs
+ * to no organisation — see lib/services/signup.ts.
  */
 
 async function signIn(formData: FormData) {
@@ -122,8 +122,12 @@ export default async function LoginPage({
 
         <div className="auth__meta">
           <p>
-            No account? Access is by invitation —{" "}
-            <Link href="/access">how access works</Link>.
+            Forgotten your password?{" "}
+            <Link href="/forgot-password">Get a link to reset it</Link>.
+          </p>
+          <p>
+            No account? <Link href="/signup">Register your organization</Link> — or ask
+            its administrator to invite you. <Link href="/access">How access works</Link>.
           </p>
           <p>
             Checking a medicine needs no account —{" "}

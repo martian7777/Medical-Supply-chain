@@ -173,6 +173,43 @@ export async function resolveShipment(
   });
 }
 
+/**
+ * What is actually IN a consignment.
+ *
+ * Needed to accept one partially: `resolveShipment` has always taken `acceptedUnitIds`,
+ * but nothing could enumerate the units for the clerk to tick, so the console offered
+ * all-or-nothing and the `partially_accepted` state was unreachable in practice.
+ *
+ * Only the two organisations on the shipment may read its lines — otherwise this is a
+ * lookup that tells any signed-in pharmacy what a competitor was sent.
+ */
+export async function listShipmentUnits(actor: Actor, shipmentId: string) {
+  const rows = await sql<
+    {
+      unit_id: string;
+      drug_name: string;
+      lot_no: string;
+      expiration_date: string;
+    }[]
+  >`
+    select sl.unit_id, d.name as drug_name, b.lot_no, b.expiration_date
+    from shipment_lines sl
+    join shipments s   on s.shipment_id = sl.shipment_id
+    join medicine_units u on u.unit_id = sl.unit_id
+    join batches b     on b.batch_id = u.batch_id
+    join drug_types d  on d.drug_type_id = b.drug_type_id
+    where sl.shipment_id = ${shipmentId}
+      and (s.to_org_id = ${actor.orgId} or s.from_org_id = ${actor.orgId})
+    order by d.name, b.lot_no, sl.unit_id`;
+
+  return rows.map((r) => ({
+    unitId: r.unit_id,
+    drugName: r.drug_name,
+    lotNo: r.lot_no,
+    expirationDate: r.expiration_date,
+  }));
+}
+
 /** The pharmacy's inbox, and the manufacturer's outbox — same query, different side. */
 export async function listShipments(actor: Actor, box: "in" | "out") {
   const rows = await sql<

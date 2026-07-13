@@ -3,31 +3,29 @@ import Link from "next/link";
 export const metadata = {
   title: "How access works · MSWP",
   description:
-    "Accounts on the Medical Supply Web Project are issued by invitation through a registered organisation. There is no self-serve registration.",
+    "Register your organisation on the Medical Supply Web Project, get approved by the regulator, and invite your staff. Citizens never need an account.",
 };
 
 /**
- * There is deliberately no self-serve sign-up form (see app/login/page.tsx): every
- * account belongs to an organisation with a seat in the chain, and organisations are
- * registered by the regulator. This page answers "how do I get in?" honestly instead
- * of collecting accounts that can never be attached to an organisation.
+ * How somebody actually gets in. Three routes, and which one applies to you is a fact
+ * about who you are — not a menu.
  */
 
 const STEPS: Array<{ num: string; title: string; body: string }> = [
   {
     num: "1.0",
-    title: "Your organisation is registered.",
-    body: "The regulator registers each manufacturer and pharmacy in the system, with its legal identity and its role in the chain. To start this, contact the regulatory body that oversees medicinal products in your market.",
+    title: "You register your organisation.",
+    body: "A manufacturer, a pharmacy or a regulator. You give its registered name and number, and you become its first administrator. The account and the organisation are created together — there is no moment at which you hold an account that belongs to nobody.",
   },
   {
     num: "2.0",
-    title: "Your first administrator is invited.",
-    body: "Once the organisation exists, its first administrator is invited to create an account. That account is bound to the organisation — every licence issued, unit serialized, shipment sent and unit dispensed is attributed to it.",
+    title: "The regulator approves it.",
+    body: "Registering is a claim, not a seat. Until a regulator has checked who you are, you can sign in and see that you are waiting, and nothing else — no licence, no serialization, no dispensing. An organisation nobody has verified has no business moving medicine.",
   },
   {
     num: "3.0",
-    title: "Administrators invite their staff.",
-    body: "Your administrator invites operators and clerks from inside the console, each with the role they actually need. Nobody in the system holds an account that belongs to no one.",
+    title: "You invite your staff.",
+    body: "Once approved, you invite operators and clerks from the People page inside the console, each with the role they actually need. They receive a link and choose their own password. Staff never register themselves — they are always attached to an organisation from the moment their account exists.",
   },
 ];
 
@@ -35,12 +33,12 @@ export default function AccessPage() {
   return (
     <article className="doc">
       <header className="doc__head">
-        <h1>Access is by invitation.</h1>
+        <h1>How access works.</h1>
         <p className="doc__standfirst">
           Every account on MSWP belongs to an organisation with a seat in the supply
-          chain — a regulator, a manufacturer, or a pharmacy. There is no open
-          registration form, because an account that belongs to no organisation has no
-          role we could trust it with.
+          chain — a regulator, a manufacturer, or a pharmacy. You can register that
+          organisation yourself; what you cannot do is act in the chain until the
+          regulator has approved it.
         </p>
       </header>
 
@@ -53,18 +51,25 @@ export default function AccessPage() {
           </section>
         ))}
 
-        <h2>Why there is no sign-up form</h2>
+        <h2>Why approval, and not just a sign-up form</h2>
         <p>
-          A supply record is only worth reading if every entry in it is attributable. A
-          self-serve form would let anyone create an account with no organisation
-          behind it — a person who could not lawfully issue a licence, serialize a unit,
-          or dispense a box. Rather than create accounts with no seat and then refuse
-          them everything, we don&apos;t create them at all.
+          A supply record is only worth reading if every entry in it is attributable. If
+          anyone could register a manufacturer and start serializing units, the public
+          verification page would be telling citizens that a stranger&apos;s codes are
+          genuine — which is precisely the counterfeit this system exists to catch. So
+          registration is open to anyone, and approval is not.
         </p>
         <p>
           This is also why the roles are fixed. A pharmacy clerk cannot issue a licence
           and never sees the button; a manufacturer cannot dispense to a citizen. Each
           console shows only what its organisation is permitted to do.
+        </p>
+
+        <h2>If you are joining an organisation already on MSWP</h2>
+        <p>
+          Do not register it again — the name is taken, and a second copy of your employer
+          would split its records in two. Ask your administrator to invite you from the
+          People page. You will get a link and choose your own password.
         </p>
 
         <h2>If you are a citizen</h2>
@@ -84,8 +89,11 @@ export default function AccessPage() {
         }}
       >
         <div style={{ display: "flex", gap: "var(--space-sm)", flexWrap: "wrap" }}>
-          <Link href="/login" className="btn btn--primary">
-            Already invited? Sign in
+          <Link href="/signup" className="btn btn--primary">
+            Register your organisation
+          </Link>
+          <Link href="/login" className="btn">
+            Sign in
           </Link>
           <Link href="/contact" className="btn">
             Ask about access

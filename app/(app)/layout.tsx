@@ -34,6 +34,19 @@ const NAV: Record<string, Array<{ href: string; label: string }>> = {
   ],
 };
 
+/**
+ * Two destinations every role shares.
+ *
+ * Security was previously reachable only from a warning banner on the government
+ * console — so a manufacturer or pharmacy admin, whose actions ALSO require a second
+ * factor, had no way to enrol one. A page that exists but cannot be navigated to is a
+ * page that does not exist.
+ */
+const COMMON = [
+  { href: "/organization", label: "People" },
+  { href: "/security", label: "Security" },
+];
+
 async function signOut() {
   "use server";
   const supabase = await userClient();
@@ -50,11 +63,16 @@ export default async function AppLayout({
   try {
     actor = await currentActor();
   } catch (e) {
-    if (e instanceof DomainError) redirect("/login");
+    if (e instanceof DomainError) {
+      // A pending org's admin is signed in and legitimate — they are simply not cleared
+      // yet. Bouncing them to /login would ask them to authenticate again to fix a
+      // problem authentication cannot fix, which reads as a broken product.
+      redirect(e.code === "ORG_PENDING" ? "/pending" : "/login");
+    }
     throw e;
   }
 
-  const links = NAV[actor.orgType] ?? [];
+  const links = [...(NAV[actor.orgType] ?? []), ...COMMON];
 
   return (
     <div style={{ minHeight: "100dvh", display: "flex", flexDirection: "column" }}>

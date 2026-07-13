@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import { ActionForm, Field, Row } from "@/components/action-form";
-import { RowAction } from "@/components/row-action";
+import { ConfirmAction } from "@/components/modal";
 import { Chip, Empty, Panel, Uuid } from "@/components/ui";
 import { currentActor } from "@/lib/auth/actor";
 import { listDrugTypes } from "@/lib/services/drug-types";
@@ -14,9 +14,12 @@ import {
 } from "@/lib/services/oversight";
 
 import {
+  approveOrgAction,
   createDrugTypeAction,
   issueLicenseAction,
+  prolongLicenseAction,
   registerOrgAction,
+  rejectOrgAction,
   revokeLicenseAction,
 } from "../actions";
 
@@ -24,9 +27,7 @@ export const dynamic = "force-dynamic";
 
 /** The regulator's console. GOV-1 through GOV-7 on one screen. */
 export default async function GovernmentConsole() {
-  const tA = Date.now();
   const actor = await currentActor();
-  const tB = Date.now();
 
   const [counts, drugTypes, licences, orgs, flagged, audit] = await Promise.all([
     oversightCounts(actor),
@@ -36,10 +37,14 @@ export default async function GovernmentConsole() {
     flaggedUnits(actor),
     recentAudit(actor),
   ]);
-  const tC = Date.now();
-  console.log(`[perf] actor=${tB - tA}ms queries=${tC - tB}ms`);
 
-  const manufacturers = orgs.filter((o) => o.type === "manufacturer");
+  // A pending org is a claim, not a counterparty. It must not appear in the licence
+  // dropdown — issuing a licence to an organisation nobody has approved is exactly the
+  // hole the approval queue exists to close.
+  const pending = orgs.filter((o) => o.status === "pending");
+  const manufacturers = orgs.filter(
+    (o) => o.type === "manufacturer" && o.status === "active",
+  );
   const today = new Date().toISOString().slice(0, 10);
 
   const stats: Array<[string, number]> = [
@@ -283,12 +288,53 @@ export default async function GovernmentConsole() {
                     </td>
                     <td>
                       {l.status === "valid" ? (
-                        <RowAction
-                          action={revokeLicenseAction}
-                          label="Revoke"
-                          variant="btn--danger"
-                          fields={{ licenseId: l.licenseId }}
-                        />
+                        <div
+                          style={{
+                            display: "flex",
+                            gap: "var(--space-xs)",
+                            flexWrap: "wrap",
+                          }}
+                        >
+                          {/* Prolonging has existed in the service layer and the REST API
+                              since the first pass, with no button anywhere that reached
+                              it — so a licence about to lapse could only be replaced, not
+                              extended. */}
+                          <ConfirmAction
+                            action={prolongLicenseAction}
+                            trigger="Extend"
+                            title="Extend this licence"
+                            body={`${l.manufacturerName} may continue producing ${l.drugName} until the new date. The licence must not be extended backwards.`}
+                            confirmLabel="Extend licence"
+                            fields={{ licenseId: l.licenseId }}
+                          >
+                            <label className="field">
+                              <span
+                                style={{ fontSize: "var(--text-sm)", fontWeight: 500 }}
+                              >
+                                New expiry
+                              </span>
+                              <input
+                                type="date"
+                                name="newExpiresAt"
+                                className="input mono"
+                                required
+                                min={l.expiresAt > today ? l.expiresAt : today}
+                                defaultValue={l.expiresAt}
+                              />
+                            </label>
+                          </ConfirmAction>
+
+                          <ConfirmAction
+                            action={revokeLicenseAction}
+                            trigger="Revoke"
+                            triggerVariant="btn--danger"
+                            title="Revoke this licence?"
+                            body={`${l.manufacturerName} will immediately be unable to serialize any new unit of ${l.drugName}. Units already produced keep their provenance and stay valid — this stops future production, it does not recall the past.`}
+                            confirmLabel="Revoke licence"
+                            confirmVariant="btn--danger"
+                            fields={{ licenseId: l.licenseId }}
+                          />
+                        </div>
                       ) : null}
                     </td>
                   </tr>
@@ -298,6 +344,91 @@ export default async function GovernmentConsole() {
           </div>
         )}
       </Panel>
+
+      {/* The approval queue. Organizations that registered themselves have proved nothing
+          yet, and until a regulator looks at them they can do nothing — so this is the
+          regulator's actual inbox, and it sits above the CRUD. */}
+      {pending.length > 0 ? (
+        <Panel
+          title="Awaiting approval"
+          action={<Chip tone="accent">{pending.length} waiting</Chip>}
+        >
+          <p
+            style={{
+              padding: "var(--space-sm) var(--space-md) 0",
+              fontSize: "var(--text-sm)",
+              color: "var(--color-ink-2)",
+            }}
+          >
+            These organizations registered themselves. Check the registration number
+            against your own register before approving — approving one is what allows it
+            to serialize or dispense real medicine.
+          </p>
+
+          <div className="table-scroll" style={{ border: 0, margin: "var(--space-sm)" }}>
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Claims to be</th>
+                  <th>Registration</th>
+                  <th />
+                </tr>
+              </thead>
+              <tbody>
+                {pending.map((o) => (
+                  <tr key={o.orgId}>
+                    <td style={{ color: "var(--color-ink)" }}>{o.name}</td>
+                    <td>{o.type}</td>
+                    <td className="mono">{o.registrationNo ?? "— none given —"}</td>
+                    <td>
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: "var(--space-xs)",
+                          flexWrap: "wrap",
+                        }}
+                      >
+                        <ConfirmAction
+                          action={approveOrgAction}
+                          trigger="Approve"
+                          triggerVariant="btn--primary"
+                          title="Approve this organization?"
+                          body={`${o.name} will be able to sign in and act as a ${o.type} in the national chain — and, if a manufacturer, to serialize units the public will be told are genuine. Approve only if you have verified who they are.`}
+                          confirmLabel="Approve"
+                          fields={{ orgId: o.orgId }}
+                        />
+                        <ConfirmAction
+                          action={rejectOrgAction}
+                          trigger="Reject"
+                          triggerVariant="btn--danger"
+                          title="Reject this registration?"
+                          body={`${o.name} will be told, when they sign in, that they were not approved. The registration stays on the record — rejecting is not deleting.`}
+                          confirmLabel="Reject"
+                          confirmVariant="btn--danger"
+                          fields={{ orgId: o.orgId }}
+                        >
+                          <label className="field">
+                            <span style={{ fontSize: "var(--text-sm)", fontWeight: 500 }}>
+                              Reason
+                            </span>
+                            <input
+                              name="note"
+                              className="input"
+                              maxLength={500}
+                              placeholder="No such registration number on our register"
+                            />
+                          </label>
+                        </ConfirmAction>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Panel>
+      ) : null}
 
       <Panel title="Organizations">
         <ActionForm action={registerOrgAction} submitLabel="Register organization">
@@ -339,6 +470,8 @@ export default async function GovernmentConsole() {
                     <td>
                       {o.status === "active" ? (
                         <Chip tone="ok">active</Chip>
+                      ) : o.status === "pending" ? (
+                        <Chip tone="accent">awaiting approval</Chip>
                       ) : (
                         <Chip tone="danger">suspended</Chip>
                       )}

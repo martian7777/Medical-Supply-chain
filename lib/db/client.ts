@@ -1,4 +1,3 @@
-import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 
 /**
@@ -72,8 +71,18 @@ function getSql(): postgres.Sql {
   return instance;
 }
 
-// Tagged-template proxy: forwards every call to the lazily-created instance.
-// The target must be a function so the `apply` trap fires for sql`...` calls.
+/**
+ * Tagged-template proxy: forwards every call to the lazily-created instance.
+ * The target must be a function so the `apply` trap fires for sql`...` calls.
+ *
+ * NOTHING may touch this proxy at module scope. Reading any property of it calls
+ * getSql(), which demands DATABASE_URL — so a single eager use at import time turns the
+ * whole lazy scheme into an eager one. That is exactly what `export const db =
+ * drizzle(sql)` used to do here: it ran on import, defeated the laziness, and took CI
+ * down with "DATABASE_URL is not set" before tests/flow.test.ts could reach its
+ * `describe.skipIf(!hasDb)`. Drizzle was never actually used — every service in
+ * lib/services talks raw SQL through this proxy — so the ORM went rather than the guard.
+ */
 export const sql: postgres.Sql = new Proxy(function () {} as unknown as postgres.Sql, {
   get(_target, prop, receiver) {
     const real = getSql();
@@ -84,5 +93,3 @@ export const sql: postgres.Sql = new Proxy(function () {} as unknown as postgres
     return (getSql() as unknown as (...a: unknown[]) => unknown)(...args);
   },
 });
-
-export const db = drizzle(sql);
