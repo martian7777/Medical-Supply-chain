@@ -1,14 +1,17 @@
 @import "tailwindcss";
 @import "../tokens.css";
 
-/* Hallmark · genre: modern-minimal · theme: Cobalt · scope: app + public page
+/* Hallmark · genre: modern-minimal · theme: Cobalt · scope: app + public + marketing
  * paper-band: cool-light · display-style: grotesk-sans · accent-hue: electric-cobalt
- * enrichment: none (typography + hairlines) · nav: app shell (not a marketing nav)
+ * marketing: macrostructure: Narrative Workflow · F4 knobs: numbering=1.0, layout=vertical,
+ *   connector=thick rule · nav: N1b (links=3, dropdowns=none, scroll=always-solid+blur)
+ *   · footer: Ft2 (order=wordmark/links/credit, separator=middot) · enrichment: none
  * pre-emit critique: P5 H5 E4 S5 R5 V4
  *
- * Two registers, one token system:
+ * Three registers, one token system:
  *   · operator dashboards — dense, hairline-ruled, keyboard-first, no ornament
  *   · public verify page  — one enormous verdict, mobile-first, read at arm's length
+ *   · marketing + auth    — the custody chain told in order; same paper, same signal
  */
 
 @theme inline {
@@ -262,6 +265,265 @@ h3 {
   gap: var(--space-md);
   padding: var(--space-sm) var(--space-md);
   border-bottom: 1px solid var(--color-rule);
+}
+
+/* ===========================================================================
+ * Marketing register — landing page + auth.
+ *
+ * The public face borrows the operator's exact vocabulary: hairline panels,
+ * mono readouts, labelled chips. A buyer evaluating a custody system should
+ * see the instrument, not a brochure about the instrument.
+ * ======================================================================== */
+
+.mkt-nav {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-nav);
+  background: color-mix(in oklch, var(--color-paper) 88%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--color-rule);
+}
+.mkt-nav__inner {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 0 var(--space-lg);
+  height: 3.5rem;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+}
+.mkt-nav__brand {
+  justify-self: start;
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+  white-space: nowrap;
+}
+.mkt-nav__center {
+  justify-self: center;
+  display: flex;
+  gap: var(--space-lg);
+}
+.mkt-nav__link {
+  font-size: var(--text-sm);
+  color: var(--color-ink-2);
+  white-space: nowrap;
+  transition: color var(--dur-short) var(--ease-out);
+}
+.mkt-nav__link:hover {
+  color: var(--color-ink);
+}
+.mkt-nav__right {
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+@media (max-width: 56rem) {
+  .mkt-nav__center {
+    display: none;
+  }
+}
+/* At phone width the bar keeps brand + the one primary action; sign-in stays
+ * reachable from the hero, the closing strip, and the footer. */
+@media (max-width: 26rem) {
+  .mkt-nav__right .btn:not(.btn--primary) {
+    display: none;
+  }
+}
+
+.mkt-main {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 0 var(--space-lg);
+}
+
+/* ---- Hero: title left, lede + actions right (7/5) ----------------------- */
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  gap: var(--space-2xl);
+  align-items: end;
+  padding-block: var(--space-3xl);
+}
+.hero__title {
+  font-size: clamp(2.25rem, 4.5vw + 0.5rem, 3.6rem);
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+}
+.hero__lede {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  font-size: var(--text-lg);
+  color: var(--color-ink-2);
+}
+.hero__actions {
+  display: flex;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
+@media (max-width: 60rem) {
+  .hero {
+    grid-template-columns: 1fr;
+    gap: var(--space-lg);
+    padding-block: var(--space-2xl);
+  }
+}
+
+/* ---- The chain: numbered stages, thick rule between --------------------- */
+.stage {
+  border-top: 2px solid var(--color-ink);
+  padding: var(--space-xl) 0 var(--space-2xl);
+  display: grid;
+  grid-template-columns: minmax(0, 6fr) minmax(0, 6fr);
+  gap: var(--space-2xl);
+  align-items: start;
+}
+.stage__num {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-accent);
+  margin-bottom: var(--space-xs);
+}
+.stage__title {
+  font-size: var(--text-2xl);
+}
+.stage__body {
+  margin-top: var(--space-sm);
+  max-width: 34rem;
+  color: var(--color-ink-2);
+}
+@media (max-width: 60rem) {
+  .stage {
+    grid-template-columns: 1fr;
+    gap: var(--space-lg);
+    padding-block: var(--space-lg) var(--space-xl);
+  }
+}
+
+/* A specimen panel: a few lines of the actual product surface. */
+.specimen {
+  display: flex;
+  flex-direction: column;
+}
+.specimen__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  font-size: var(--text-sm);
+}
+.specimen__row + .specimen__row {
+  border-top: 1px solid var(--color-rule);
+}
+.specimen__row .mono {
+  font-size: var(--text-xs);
+  color: var(--color-ink-2);
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+
+/* ---- Who it's for: hairline-divided columns ------------------------------ */
+.roles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-xl);
+  padding-block: var(--space-xl);
+}
+.role {
+  border-top: 1px solid var(--color-rule-2);
+  padding-top: var(--space-md);
+}
+.role h3 {
+  font-size: var(--text-lg);
+}
+.role p {
+  margin-top: var(--space-xs);
+  font-size: var(--text-sm);
+  color: var(--color-ink-2);
+}
+@media (max-width: 60rem) {
+  .roles {
+    grid-template-columns: 1fr;
+    gap: var(--space-lg);
+  }
+}
+
+/* ---- Closing strip ------------------------------------------------------- */
+.cta-strip {
+  border-top: 2px solid var(--color-ink);
+  padding-block: var(--space-2xl) var(--space-3xl);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  align-items: flex-start;
+}
+.cta-strip h2 {
+  font-size: var(--text-3xl);
+}
+
+.mkt-foot {
+  border-top: 1px solid var(--color-rule);
+}
+.mkt-foot__inner {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: var(--space-lg);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: var(--space-sm);
+  row-gap: var(--space-2xs);
+  font-size: var(--text-sm);
+  color: var(--color-ink-3);
+}
+.mkt-foot__inner a {
+  color: var(--color-ink-2);
+  white-space: nowrap;
+}
+.mkt-foot__inner a:hover {
+  color: var(--color-ink);
+}
+
+/* ---- Auth: one centred column, panel-ruled ------------------------------- */
+.auth {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: var(--space-lg);
+}
+.auth__col {
+  width: 100%;
+  max-width: 24rem;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+.auth__panel {
+  border: 1px solid var(--color-rule);
+  border-radius: var(--radius-lg);
+  padding: var(--space-xl);
+  background: var(--color-paper);
+}
+.auth__meta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  font-size: var(--text-sm);
+  color: var(--color-ink-3);
+}
+.auth__meta a {
+  color: var(--color-ink-2);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.auth__meta a:hover {
+  color: var(--color-accent);
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -1,6 +1,16 @@
 [
   {
     "date": "2026-07-13",
+    "macrostructure": "Narrative Workflow",
+    "theme": "Cobalt",
+    "theme_axes": "cool-light / grotesk-sans / electric-cobalt",
+    "enrichment": "none — typography + hairline specimen panels (Tier A, product's own chip/mono vocabulary)",
+    "nav": "N1b (links=3, dropdowns=none, always-solid+blur)",
+    "footer": "Ft2 (wordmark/links/credit, middot separator)",
+    "brief": "MSWP — marketing landing page (custody chain in 5 numbered stages) + /signup invitation-model page + /login redesign"
+  },
+  {
+    "date": "2026-07-13",
     "macrostructure": "app-scope (operator consoles) + single-purpose trust page",
     "theme": "Cobalt",
     "theme_axes": "cool-light / grotesk-sans / electric-cobalt",

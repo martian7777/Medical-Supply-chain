@@ -52,17 +52,37 @@ function connectionString(): string {
 }
 
 // Reused across invocations on a warm Lambda; recreated on a cold start.
-export const sql: postgres.Sql =
-  globalThis.__mswp_sql ??
-  postgres(connectionString(), {
+// Lazy: the connection is only opened on the first actual use, so importing
+// this module without DATABASE_URL (e.g. in CI where integration tests skip
+// themselves) does not throw.
+function getSql(): postgres.Sql {
+  if (globalThis.__mswp_sql) return globalThis.__mswp_sql;
+
+  const instance = postgres(connectionString(), {
     max: 10,
     prepare: false,
     idle_timeout: 20,
     connect_timeout: 10,
   });
 
-if (process.env.NODE_ENV !== "production") {
-  globalThis.__mswp_sql = sql;
+  if (process.env.NODE_ENV !== "production") {
+    globalThis.__mswp_sql = instance;
+  }
+
+  return instance;
 }
+
+// Tagged-template proxy: forwards every call to the lazily-created instance.
+// The target must be a function so the `apply` trap fires for sql`...` calls.
+export const sql: postgres.Sql = new Proxy(function () {} as unknown as postgres.Sql, {
+  get(_target, prop, receiver) {
+    const real = getSql();
+    const value = Reflect.get(real, prop, receiver);
+    return typeof value === "function" ? value.bind(real) : value;
+  },
+  apply(_target, _thisArg, args) {
+    return (getSql() as unknown as (...a: unknown[]) => unknown)(...args);
+  },
+});
 
 export const db = drizzle(sql);

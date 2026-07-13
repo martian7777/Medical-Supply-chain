@@ -1,12 +1,18 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { userClient } from "@/lib/supabase/server";
+
+export const metadata = {
+  title: "Sign in · MSWP",
+  description: "Operator sign-in for the Medical Supply Web Project.",
+};
 
 /**
  * Sign-in. There is no sign-up: Government registers an organisation and invites its
  * first admin, who invites their staff. A self-serve registration form would let
  * anyone create an account with no organisation, which is a role we deliberately
- * have no seat for.
+ * have no seat for. /signup explains this to anyone who goes looking.
  */
 
 async function signIn(formData: FormData) {
@@ -36,50 +42,95 @@ export default async function LoginPage({
   const params = await searchParams;
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center px-6">
-      <h1 className="text-2xl font-semibold tracking-tight">Sign in</h1>
-      <p className="mt-2 text-sm text-[var(--color-muted)]">
-        Medical Supply Web Project
-      </p>
-
-      <form action={signIn} className="mt-8 flex flex-col gap-4">
-        <input type="hidden" name="next" value={params.next ?? "/dashboard"} />
-
-        <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium">Email</span>
-          <input
-            name="email"
-            type="email"
-            required
-            autoComplete="username"
-            className="rounded-md border border-[var(--color-line)] px-3 py-2"
-          />
-        </label>
-
-        <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium">Password</span>
-          <input
-            name="password"
-            type="password"
-            required
-            autoComplete="current-password"
-            className="rounded-md border border-[var(--color-line)] px-3 py-2"
-          />
-        </label>
-
-        {params.error ? (
-          <p role="alert" className="text-sm text-[var(--color-danger)]">
-            Those credentials were not recognised.
-          </p>
-        ) : null}
-
-        <button
-          type="submit"
-          className="mt-2 rounded-md bg-[var(--color-ink)] px-4 py-2 font-medium text-[var(--color-canvas)]"
+    <main className="auth">
+      <div className="auth__col">
+        <Link
+          href="/"
+          style={{
+            fontFamily: "var(--font-display)",
+            fontWeight: 600,
+            letterSpacing: "-0.02em",
+            color: "var(--color-ink)",
+          }}
         >
-          Sign in
-        </button>
-      </form>
+          MSWP
+        </Link>
+
+        <div className="auth__panel">
+          <h1 style={{ fontSize: "var(--text-2xl)" }}>Sign in</h1>
+          <p
+            style={{
+              marginTop: "var(--space-2xs)",
+              fontSize: "var(--text-sm)",
+              color: "var(--color-ink-3)",
+            }}
+          >
+            Operator access to the supply record.
+          </p>
+
+          <form
+            action={signIn}
+            style={{
+              marginTop: "var(--space-lg)",
+              display: "flex",
+              flexDirection: "column",
+              gap: "var(--space-md)",
+            }}
+          >
+            <input type="hidden" name="next" value={params.next ?? "/dashboard"} />
+
+            <label className="field">
+              <span style={{ fontSize: "var(--text-sm)", fontWeight: 500 }}>Email</span>
+              <input
+                name="email"
+                type="email"
+                required
+                autoComplete="username"
+                className="input"
+                aria-invalid={params.error ? true : undefined}
+              />
+            </label>
+
+            <label className="field">
+              <span style={{ fontSize: "var(--text-sm)", fontWeight: 500 }}>
+                Password
+              </span>
+              <input
+                name="password"
+                type="password"
+                required
+                autoComplete="current-password"
+                className="input"
+                aria-invalid={params.error ? true : undefined}
+              />
+            </label>
+
+            {params.error ? (
+              <p
+                role="alert"
+                style={{ fontSize: "var(--text-sm)", color: "var(--color-danger)" }}
+              >
+                Those credentials were not recognised.
+              </p>
+            ) : null}
+
+            <button type="submit" className="btn btn--primary">
+              Sign in
+            </button>
+          </form>
+        </div>
+
+        <div className="auth__meta">
+          <p>
+            No account? Access is by invitation —{" "}
+            <Link href="/signup">how access works</Link>.
+          </p>
+          <p>
+            Checking a medicine needs no account —{" "}
+            <Link href="/verify">use the public check</Link>.
+          </p>
+        </div>
+      </div>
     </main>
   );
 }
