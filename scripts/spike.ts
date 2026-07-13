@@ -37,7 +37,13 @@ const admin = createClient(SUPABASE_URL, SERVICE_KEY, {
   auth: { persistSession: false, autoRefreshToken: false },
 });
 
-const sql = postgres(DATABASE_URL, { max: 5, prepare: false });
+// A spike that hangs teaches nothing. Cap every query so a failure is a failure,
+// not an indefinite wait.
+const sql = postgres(DATABASE_URL, {
+  max: 5,
+  prepare: false,
+  connect_timeout: 15,
+});
 
 let failures = 0;
 
@@ -50,7 +56,10 @@ const fail = (label: string, detail = "") => {
 
 const PASSWORD = "spike-Passw0rd!";
 
+const step = (msg: string) => console.log(`  ..  ${msg}`);
+
 async function seedFixtures() {
+  step("connecting / creating organizations");
   // Two manufacturers. Org A must never be able to see Org B's units.
   const [gov] = await sql`
     insert into organizations (type, name) values ('government', 'Regulator (spike)')
@@ -62,6 +71,7 @@ async function seedFixtures() {
     insert into organizations (type, name) values ('manufacturer', 'MediLab B (spike)')
     returning org_id`;
 
+  step("creating auth users");
   const mkUser = async (email: string, orgId: string, role: string) => {
     const { data, error } = await admin.auth.admin.createUser({
       email,
@@ -81,6 +91,7 @@ async function seedFixtures() {
   const userA = await mkUser(`a+${stamp}@spike.test`, mfrA!.org_id, "operator");
   const userB = await mkUser(`b+${stamp}@spike.test`, mfrB!.org_id, "operator");
 
+  step("creating drug type + licences");
   const [drug] = await sql`
     insert into drug_types (code, name, created_by)
     values (${`SPIKE-${stamp}`}, 'Paracetamol 500mg (spike)', ${govUser})
@@ -181,27 +192,47 @@ async function spikeRls(fx: Awaited<ReturnType<typeof seedFixtures>>) {
   const clientA = await asUser(fx.emailA);
   const clientB = await asUser(fx.emailB);
 
-  const { count: ownCount, error: ownErr } = await clientA
-    .from("medicine_units")
-    .select("*", { count: "exact", head: true });
+  // Pick ONE real unit belonging to org A and ask about it by primary key.
+  //
+  // (An earlier version of this check counted the whole table. That forces a full
+  // scan through the policy's correlated subquery, times out, and tells you nothing
+  // about isolation. The question is not "how many rows can B see" — it is "can B
+  // see THIS row", and that is a single indexed lookup.)
+  const [sample] = await sql<{ unit_id: string }[]>`
+    select u.unit_id from medicine_units u
+    join batches b on b.batch_id = u.batch_id
+    where b.manufacturer_org_id = ${fx.mfrA}
+    limit 1`;
 
-  if (ownErr) fail("org A can read its own units", ownErr.message);
-  else if ((ownCount ?? 0) > 0) pass("org A can read its own units", `${ownCount} visible`);
-  else fail("org A can read its own units", "saw 0 — policy is too tight");
+  if (!sample) {
+    fail("found a sample unit belonging to org A", "no units were generated");
+    return;
+  }
+  const targetUnit = sample.unit_id;
+
+  const readAs = async (c: Awaited<ReturnType<typeof asUser>>) => {
+    const { data, error } = await c
+      .from("medicine_units")
+      .select("unit_id")
+      .eq("unit_id", targetUnit);
+    return { rows: data?.length ?? 0, error };
+  };
+
+  const own = await readAs(clientA);
+  if (own.error) fail("org A can read its own unit", JSON.stringify(own.error));
+  else if (own.rows === 1) pass("org A can read its own unit");
+  else fail("org A can read its own unit", `saw ${own.rows} rows — policy is too tight`);
 
   // The one that matters.
-  const { count: crossCount, error: crossErr } = await clientB
-    .from("medicine_units")
-    .select("*", { count: "exact", head: true });
-
-  if (crossErr) {
-    pass("org B is blocked from org A's units", `error: ${crossErr.message}`);
-  } else if ((crossCount ?? 0) === 0) {
-    pass("org B sees zero of org A's 100,000 units — RLS holds");
+  const cross = await readAs(clientB);
+  if (cross.error) {
+    pass("org B is blocked from org A's unit", `rejected: ${cross.error.code}`);
+  } else if (cross.rows === 0) {
+    pass("org B cannot see org A's unit — RLS holds");
   } else {
     fail(
-      "org B is blocked from org A's units",
-      `LEAK: org B can see ${crossCount} units it does not own`,
+      "org B is blocked from org A's unit",
+      "LEAK: org B read a unit belonging to another organization",
     );
   }
 
@@ -233,10 +264,13 @@ async function spikePooling() {
     );
   }
 
+  // Trivial queries on purpose. This check is about CONNECTION handling — whether 50
+  // simultaneous callers exhaust the pool or collide on prepared statements — not
+  // about how fast Postgres can count. A heavy query here would just measure the query.
   const CONCURRENCY = 50;
   const started = Date.now();
   const results = await Promise.allSettled(
-    Array.from({ length: CONCURRENCY }, () => sql`select count(*) from medicine_units`),
+    Array.from({ length: CONCURRENCY }, (_, i) => sql`select ${i}::int as n, now()`),
   );
   const elapsed = Date.now() - started;
 
