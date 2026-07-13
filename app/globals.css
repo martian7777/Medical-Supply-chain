@@ -1,0 +1,27 @@
+@import "tailwindcss";
+
+/*
+ * Placeholder tokens only. The real token system (both registers — operator
+ * workbench and public trust page) is generated in Phase 3 via /hallmark.
+ * Do not build components against these values expecting them to survive.
+ */
+@theme {
+  --color-canvas: oklch(99% 0.002 250);
+  --color-ink: oklch(22% 0.01 250);
+  --color-muted: oklch(55% 0.01 250);
+  --color-line: oklch(92% 0.004 250);
+
+  --color-ok: oklch(58% 0.14 155);
+  --color-warn: oklch(72% 0.16 75);
+  --color-danger: oklch(58% 0.19 25);
+}
+
+:root {
+  color-scheme: light dark;
+}
+
+body {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  -webkit-font-smoothing: antialiased;
+}
