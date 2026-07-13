@@ -12,7 +12,7 @@ export const metadata = {
  * Sign-in. There is no sign-up: Government registers an organisation and invites its
  * first admin, who invites their staff. A self-serve registration form would let
  * anyone create an account with no organisation, which is a role we deliberately
- * have no seat for. /signup explains this to anyone who goes looking.
+ * have no seat for. /access explains this to anyone who goes looking.
  */
 
 async function signIn(formData: FormData) {
@@ -123,7 +123,7 @@ export default async function LoginPage({
         <div className="auth__meta">
           <p>
             No account? Access is by invitation —{" "}
-            <Link href="/signup">how access works</Link>.
+            <Link href="/access">how access works</Link>.
           </p>
           <p>
             Checking a medicine needs no account —{" "}

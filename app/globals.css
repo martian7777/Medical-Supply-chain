@@ -4,8 +4,9 @@
 /* Hallmark · genre: modern-minimal · theme: Cobalt · scope: app + public + marketing
  * paper-band: cool-light · display-style: grotesk-sans · accent-hue: electric-cobalt
  * marketing: macrostructure: Narrative Workflow · F4 knobs: numbering=1.0, layout=vertical,
- *   connector=thick rule · nav: N1b (links=3, dropdowns=none, scroll=always-solid+blur)
- *   · footer: Ft2 (order=wordmark/links/credit, separator=middot) · enrichment: none
+ *   connector=thick rule · nav: N1b (links=4, dropdowns=none, scroll=always-solid+blur)
+ *   · footer: Ft1 mast-headed (wordmark=xl, tagline=roman body, links=inline)
+ *   · enrichment: none · secondary pages: Long Document (prose measure, hairline heads)
  * pre-emit critique: P5 H5 E4 S5 R5 V4
  *
  * Three registers, one token system:
@@ -467,27 +468,150 @@ h3 {
   font-size: var(--text-3xl);
 }
 
+/* ---- Document pages (about · access · privacy · terms · contact) ---------
+ * The Long Document register: one measured column, hairline-ruled heads. A
+ * policy is read, not scanned, and 65ch is where the eye stops losing its line.
+ * ------------------------------------------------------------------------ */
+.doc {
+  max-width: 42rem;
+  padding-block: var(--space-2xl) var(--space-3xl);
+}
+.doc__head {
+  padding-bottom: var(--space-lg);
+  border-bottom: 2px solid var(--color-ink);
+}
+.doc__head h1 {
+  font-size: var(--text-3xl);
+  line-height: 1.1;
+}
+.doc__standfirst {
+  margin-top: var(--space-sm);
+  font-size: var(--text-lg);
+  color: var(--color-ink-2);
+}
+.doc__updated {
+  margin-top: var(--space-md);
+}
+
+.prose > * + * {
+  margin-top: var(--space-md);
+}
+.prose h2 {
+  margin-top: var(--space-2xl);
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--color-rule);
+  font-size: var(--text-xl);
+}
+.prose h3 {
+  margin-top: var(--space-lg);
+  font-size: var(--text-lg);
+}
+.prose p,
+.prose li {
+  color: var(--color-ink-2);
+  max-width: 65ch;
+}
+.prose ul {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+.prose li {
+  position: relative;
+  padding-left: var(--space-md);
+}
+/* A drawn rule, not a bullet glyph — the same hairline language as the tables. */
+.prose li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.6875em;
+  width: 0.5rem;
+  height: 1px;
+  background: var(--color-rule-2);
+}
+.prose a {
+  color: var(--color-ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--color-rule-2);
+  transition: text-decoration-color var(--dur-short) var(--ease-out);
+}
+.prose a:hover {
+  text-decoration-color: var(--color-accent);
+}
+.prose strong {
+  color: var(--color-ink);
+  font-weight: 600;
+}
+
+/* A standing notice — used where the page must admit what it is not. */
+.notice {
+  border: 1px solid var(--color-warn);
+  background: var(--color-warn-weak);
+  border-radius: var(--radius);
+  padding: var(--space-md);
+  font-size: var(--text-sm);
+}
+.notice p {
+  color: var(--color-ink-2);
+  max-width: none;
+}
+.notice p + p {
+  margin-top: var(--space-xs);
+}
+
+/* ---- Footer: Ft1 mast-headed -------------------------------------------- */
 .mkt-foot {
   border-top: 1px solid var(--color-rule);
+  margin-top: auto;
 }
 .mkt-foot__inner {
   max-width: 72rem;
   margin: 0 auto;
-  padding: var(--space-lg);
+  padding: var(--space-2xl) var(--space-lg) var(--space-xl);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+.mkt-foot__mast {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  column-gap: var(--space-sm);
-  row-gap: var(--space-2xs);
+  gap: var(--space-sm) var(--space-md);
+}
+.mkt-foot__word {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--text-xl);
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+}
+.mkt-foot__tag {
   font-size: var(--text-sm);
   color: var(--color-ink-3);
 }
-.mkt-foot__inner a {
+.mkt-foot__links {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: var(--space-lg);
+  row-gap: var(--space-xs);
+  padding-top: var(--space-lg);
+  border-top: 1px solid var(--color-rule);
+  font-size: var(--text-sm);
+}
+.mkt-foot__links a {
   color: var(--color-ink-2);
   white-space: nowrap;
+  transition: color var(--dur-short) var(--ease-out);
 }
-.mkt-foot__inner a:hover {
+.mkt-foot__links a:hover {
   color: var(--color-ink);
+}
+.mkt-foot__legal {
+  font-size: var(--text-xs);
+  color: var(--color-ink-3);
 }
 
 /* ---- Auth: one centred column, panel-ruled ------------------------------- */

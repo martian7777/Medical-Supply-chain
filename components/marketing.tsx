@@ -1,10 +1,28 @@
 import Link from "next/link";
 
 /**
- * The public-facing shell: nav + footer for the landing page and the access page.
+ * The public shell: nav + footer for the landing page and every document page.
  * Distinct from the operator shell in app/(app)/layout.tsx — an operator's nav is
- * scoped to their role; this one addresses a visitor who has no role yet.
+ * scoped to their role; this one addresses a visitor who has no role yet, so its
+ * two actions are the two things a visitor can actually do: check a box, or sign in.
  */
+
+const NAV = [
+  { href: "/#how", label: "How it works" },
+  { href: "/access", label: "Get access" },
+  { href: "/about", label: "About" },
+  { href: "/contact", label: "Contact" },
+];
+
+const FOOT = [
+  { href: "/verify", label: "Check a medicine" },
+  { href: "/access", label: "Get access" },
+  { href: "/login", label: "Sign in" },
+  { href: "/about", label: "About" },
+  { href: "/contact", label: "Contact" },
+  { href: "/privacy", label: "Privacy" },
+  { href: "/terms", label: "Terms" },
+];
 
 export function MarketingNav() {
   return (
@@ -15,15 +33,11 @@ export function MarketingNav() {
         </Link>
 
         <nav aria-label="Site" className="mkt-nav__center">
-          <Link href="/#how" className="mkt-nav__link">
-            How it works
-          </Link>
-          <Link href="/#roles" className="mkt-nav__link">
-            Who it&apos;s for
-          </Link>
-          <Link href="/signup" className="mkt-nav__link">
-            Get access
-          </Link>
+          {NAV.map((l) => (
+            <Link key={l.href} href={l.href} className="mkt-nav__link">
+              {l.label}
+            </Link>
+          ))}
         </nav>
 
         <div className="mkt-nav__right">
@@ -43,20 +57,27 @@ export function MarketingFooter() {
   return (
     <footer className="mkt-foot">
       <div className="mkt-foot__inner">
-        <span style={{ fontFamily: "var(--font-display)", fontWeight: 600, color: "var(--color-ink)" }}>
-          MSWP
-        </span>
-        <span>Medical Supply Web Project</span>
-        <span aria-hidden="true">·</span>
-        <span>licences, serialized units, custody, public verification</span>
-        <span aria-hidden="true">·</span>
-        <Link href="/verify">Check a medicine</Link>
-        <span aria-hidden="true">·</span>
-        <Link href="/login">Sign in</Link>
-        <span aria-hidden="true">·</span>
-        <Link href="/signup">Get access</Link>
-        <span aria-hidden="true">·</span>
-        <span>© 2026</span>
+        <div className="mkt-foot__mast">
+          <Link href="/" className="mkt-foot__word">
+            MSWP
+          </Link>
+          <span className="mkt-foot__tag">
+            Licences, serialized units, custody, public verification.
+          </span>
+        </div>
+
+        <nav aria-label="Footer" className="mkt-foot__links">
+          {FOOT.map((l) => (
+            <Link key={l.href} href={l.href}>
+              {l.label}
+            </Link>
+          ))}
+        </nav>
+
+        <p className="mkt-foot__legal">
+          © 2026 Medical Supply Web Project. Checking a medicine never requires an
+          account.
+        </p>
       </div>
     </footer>
   );

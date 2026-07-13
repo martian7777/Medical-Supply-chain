@@ -1,13 +1,13 @@
 [
   {
-    "date": "2026-07-13",
-    "macrostructure": "Narrative Workflow",
+    "date": "2026-07-14",
+    "macrostructure": "Narrative Workflow (landing) + Long Document (about · access · privacy · terms · contact)",
     "theme": "Cobalt",
     "theme_axes": "cool-light / grotesk-sans / electric-cobalt",
-    "enrichment": "none — typography + hairline specimen panels (Tier A, product's own chip/mono vocabulary)",
-    "nav": "N1b (links=3, dropdowns=none, always-solid+blur)",
-    "footer": "Ft2 (wordmark/links/credit, middot separator)",
-    "brief": "MSWP — marketing landing page (custody chain in 5 numbered stages) + /signup invitation-model page + /login redesign"
+    "enrichment": "none — typography + hairline specimen panels reusing the product's own chip/mono vocabulary",
+    "nav": "N1b (links=4, dropdowns=none, always-solid+blur)",
+    "footer": "Ft1 mast-headed (wordmark=xl, tagline=roman body, links=inline)",
+    "brief": "MSWP — marketing landing (custody chain in 5 stages), /access invitation model, /about, /contact, /privacy, /terms, /login redesign; shared (marketing) route-group shell"
   },
   {
     "date": "2026-07-13",

@@ -1,7 +1,5 @@
 import Link from "next/link";
 
-import { MarketingFooter, MarketingNav } from "@/components/marketing";
-
 /**
  * The landing page is the custody chain told in order — five numbered stages,
  * because the sequence IS the product. Each stage pairs a plain-language claim
@@ -119,7 +117,9 @@ const STAGES: Array<{
           <span className="chip chip--ok">dispensed by a licensed pharmacy</span>
         </div>
         <div className="specimen__row">
-          <span className="mono">made by a licensed manufacturer · 2 custody transfers · no alerts</span>
+          <span className="mono">
+            made by a licensed manufacturer · 2 custody transfers · no alerts
+          </span>
         </div>
       </div>
     ),
@@ -128,109 +128,111 @@ const STAGES: Array<{
 
 export default function Home() {
   return (
-    <div style={{ minHeight: "100dvh", display: "flex", flexDirection: "column" }}>
-      <MarketingNav />
+    <>
+      <section className="hero">
+        <h1 className="hero__title">Every pack, from the plant to the counter.</h1>
+        <div className="hero__lede">
+          <p>
+            MSWP keeps one shared record for every medicine unit — the licence it was
+            made under, the serial number on its box, every change of custody — and
+            gives anyone a public check they can run on any box.
+          </p>
+          <div className="hero__actions">
+            <Link href="/verify" className="btn btn--primary">
+              Check a medicine
+            </Link>
+            <Link href="/access" className="btn">
+              Get access for your organisation
+            </Link>
+          </div>
+        </div>
+      </section>
 
-      <main className="mkt-main" style={{ flex: 1, width: "100%" }}>
-        <section className="hero">
-          <h1 className="hero__title">Every pack, from the plant to the counter.</h1>
-          <div className="hero__lede">
+      <section id="how" aria-label="How it works">
+        {STAGES.map((stage) => (
+          <article key={stage.num} className="stage">
+            <div>
+              <span className="stage__num">{stage.num}</span>
+              <h2 className="stage__title">{stage.title}</h2>
+              <p className="stage__body">{stage.body}</p>
+            </div>
+            <figure className="panel" style={{ margin: 0 }}>
+              {stage.specimen}
+            </figure>
+          </article>
+        ))}
+      </section>
+
+      <section id="roles" aria-label="Who it is for">
+        <div className="stage" style={{ display: "block" }}>
+          <h2 style={{ fontSize: "var(--text-3xl)" }}>
+            Built for the people who handle it.
+          </h2>
+        </div>
+        <div className="roles" style={{ paddingTop: 0 }}>
+          <div className="role">
+            <h3>Government</h3>
             <p>
-              MSWP keeps one shared record for every medicine unit — the licence it
-              was made under, the serial number on its box, every change of custody —
-              and gives anyone a public check they can run on any box.
+              Registers drug types, issues and revokes licences, and oversees every
+              organisation in the chain from one regulatory console.
             </p>
-            <div className="hero__actions">
-              <Link href="/verify" className="btn btn--primary">
-                Check a medicine
-              </Link>
-              <Link href="/signup" className="btn">
-                Get access for your organisation
-              </Link>
-            </div>
           </div>
-        </section>
-
-        <section id="how" aria-label="How it works">
-          {STAGES.map((stage) => (
-            <article key={stage.num} className="stage">
-              <div>
-                <span className="stage__num">{stage.num}</span>
-                <h2 className="stage__title">{stage.title}</h2>
-                <p className="stage__body">{stage.body}</p>
-              </div>
-              <figure className="panel" style={{ margin: 0 }}>
-                {stage.specimen}
-              </figure>
-            </article>
-          ))}
-        </section>
-
-        <section id="roles" aria-label="Who it is for">
-          <div className="stage" style={{ display: "block" }}>
-            <h2 style={{ fontSize: "var(--text-3xl)" }}>
-              Built for the people who handle it.
-            </h2>
+          <div className="role">
+            <h3>Manufacturers</h3>
+            <p>
+              Register batches under a valid licence, serialize units, print the codes,
+              and ship to pharmacies with custody recorded automatically.
+            </p>
           </div>
-          <div className="roles" style={{ paddingTop: 0 }}>
-            <div className="role">
-              <h3>Government</h3>
-              <p>
-                Registers drug types, issues and revokes licences, and oversees every
-                organisation in the chain from one regulatory console.
-              </p>
-            </div>
-            <div className="role">
-              <h3>Manufacturers</h3>
-              <p>
-                Register batches under a valid licence, serialize units, print the
-                codes, and ship to pharmacies with custody recorded automatically.
-              </p>
-            </div>
-            <div className="role">
-              <h3>Pharmacies</h3>
-              <p>
-                Accept incoming shipments, dispense by the rules, and resolve disputes
-                — with an inventory view that always matches the record.
-              </p>
-            </div>
+          <div className="role">
+            <h3>Pharmacies</h3>
+            <p>
+              Accept incoming shipments, dispense by the rules, and resolve disputes —
+              with an inventory view that always matches the record.
+            </p>
           </div>
-          <p
+        </div>
+        <p
+          style={{
+            fontSize: "var(--text-sm)",
+            color: "var(--color-ink-3)",
+            paddingBottom: "var(--space-xl)",
+          }}
+        >
+          Citizens don&apos;t need an account. The{" "}
+          <Link
+            href="/verify"
             style={{
-              fontSize: "var(--text-sm)",
-              color: "var(--color-ink-3)",
-              paddingBottom: "var(--space-xl)",
+              color: "var(--color-ink-2)",
+              textDecoration: "underline",
+              textUnderlineOffset: "3px",
             }}
           >
-            Citizens don&apos;t need an account. The{" "}
-            <Link
-              href="/verify"
-              style={{ color: "var(--color-ink-2)", textDecoration: "underline", textUnderlineOffset: "3px" }}
-            >
-              verification page
-            </Link>{" "}
-            is public, on purpose.
-          </p>
-        </section>
+            verification page
+          </Link>{" "}
+          is public, on purpose.
+        </p>
+      </section>
 
-        <section className="cta-strip" aria-label="Get started">
-          <h2>Holding a box right now?</h2>
-          <Link href="/verify" className="btn btn--primary">
-            Check a medicine
+      <section className="cta-strip" aria-label="Get started">
+        <h2>Holding a box right now?</h2>
+        <Link href="/verify" className="btn btn--primary">
+          Check a medicine
+        </Link>
+        <p style={{ fontSize: "var(--text-sm)", color: "var(--color-ink-3)" }}>
+          Run an organisation in the chain?{" "}
+          <Link
+            href="/access"
+            style={{
+              color: "var(--color-ink-2)",
+              textDecoration: "underline",
+              textUnderlineOffset: "3px",
+            }}
+          >
+            How access works →
           </Link>
-          <p style={{ fontSize: "var(--text-sm)", color: "var(--color-ink-3)" }}>
-            Run an organisation in the chain?{" "}
-            <Link
-              href="/signup"
-              style={{ color: "var(--color-ink-2)", textDecoration: "underline", textUnderlineOffset: "3px" }}
-            >
-              How access works →
-            </Link>
-          </p>
-        </section>
-      </main>
-
-      <MarketingFooter />
-    </div>
+        </p>
+      </section>
+    </>
   );
 }

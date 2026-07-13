@@ -15,7 +15,23 @@ type CookieToSet = { name: string; value: string; options: CookieOptions };
  * cookie is the whole vulnerability.
  */
 
-const PUBLIC_PATHS = ["/", "/verify", "/login", "/auth"];
+/**
+ * Anything a visitor with no account must be able to read. Forgetting to list a
+ * marketing page here does not 404 it — it bounces the reader to /login, which reads
+ * as a broken link and asks a stranger to sign in to learn what the product is.
+ */
+const PUBLIC_PATHS = [
+  "/",
+  "/verify",
+  "/login",
+  "/auth",
+  "/access",
+  "/signup", // legacy path; redirects to /access
+  "/about",
+  "/contact",
+  "/privacy",
+  "/terms",
+];
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });
