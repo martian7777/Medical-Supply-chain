@@ -15,8 +15,8 @@
     "db:stop": "supabase stop",
     "db:reset": "supabase db reset",
     "db:generate": "drizzle-kit generate",
-    "db:push": "supabase db push",
-    "spike": "node --env-file=.env.local --import tsx scripts/spike.ts"
+    "db:migrate": "node --env-file=.env --import tsx scripts/migrate.ts",
+    "spike": "node --env-file=.env --import tsx scripts/spike.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.5.2",
