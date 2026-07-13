@@ -14,20 +14,26 @@ import postgres from "postgres";
  *   - DATABASE_URL must point at Supavisor in TRANSACTION mode (port 6543), which
  *     multiplexes many short-lived clients onto few real backends.
  *   - Transaction mode does not support prepared statements, hence `prepare: false`.
- *     Leaving it on produces intermittent, maddening "prepared statement already
- *     exists" errors under concurrency.
- *   - `max: 4` — small, but NOT 1.
+ *     Leaving it on produces intermittent "prepared statement already exists" errors
+ *     under concurrency.
  *
- * That last point cost an afternoon. `max: 1` looks right ("let Supavisor do the
- * pooling"), and it is fine for sequential queries. But a page that fires several
- * queries at once — the government console runs six in a Promise.all — makes postgres.js
- * PIPELINE them down the single connection, and Supavisor in transaction mode does not
- * handle pipelined extended-protocol queries. It does not error; it simply stalls. The
- * console took over 30 seconds to render and every individual query measured 100ms.
+ * MAX MUST EXCEED THE PEAK CONCURRENT QUERIES OF ANY SINGLE REQUEST. This one cost an
+ * afternoon, so it is worth being precise about.
  *
- * A handful of connections lets concurrent queries take separate pooler sessions, which
- * is what the pooler is for. Keep the number small — this multiplies across serverless
- * invocations.
+ * The government console fetches six datasets in a Promise.all. With `max` below six,
+ * postgres.js QUEUES the excess — and a queued query, handed a recycled Supavisor
+ * transaction-mode connection, sometimes never comes back. It does not error and it does
+ * not time out; it simply hangs. The page took over 30 seconds to render while every
+ * individual query, measured on its own, took 100ms. Sequentially: fine. Concurrently:
+ * five of six returned and the sixth vanished. (`scripts/perf.ts` reproduces exactly
+ * this — it is what found it.)
+ *
+ * With `max: 10` nothing is ever queued and the same six queries finish in ~690ms.
+ *
+ * Ten client connections per instance is safe here: Supavisor accepts a large number of
+ * CLIENT connections (that is its job) and multiplexes them onto a much smaller pool of
+ * real backends. What must not happen is a request firing more concurrent queries than
+ * this number.
  */
 
 declare global {
@@ -49,7 +55,7 @@ function connectionString(): string {
 export const sql: postgres.Sql =
   globalThis.__mswp_sql ??
   postgres(connectionString(), {
-    max: 4,
+    max: 10,
     prepare: false,
     idle_timeout: 20,
     connect_timeout: 10,

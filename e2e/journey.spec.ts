@@ -69,15 +69,22 @@ test("Gov → Manufacturer → Pharmacy → public verification", async ({ page 
   await page.goto("/government");
   await expect(page.getByRole("heading", { name: "Oversight" })).toBeVisible();
 
-  await page.getByLabel("Code").fill(CODE);
-  await page.getByLabel("Name").first().fill(`Ibuprofen 400mg ${stamp}`);
-  await page.getByRole("button", { name: "Register drug type" }).click();
+  // Scope to each panel's form — "Manufacturer" appears both as a licence field and as
+  // an option inside the organization "Type" select.
+  const drugForm = page.locator("form").filter({ has: page.getByRole("button", { name: "Register drug type" }) });
+  const licenceForm = page.locator("form").filter({ has: page.getByRole("button", { name: "Issue licence" }) });
+
+  await drugForm.getByLabel("Code").fill(CODE);
+  await drugForm.getByLabel("Name").fill(`Ibuprofen 400mg ${stamp}`);
+  await drugForm.getByRole("button", { name: "Register drug type" }).click();
   await expect(page.getByText("Drug type registered.")).toBeVisible();
 
-  await page.getByLabel("Drug type").selectOption({ label: `Ibuprofen 400mg ${stamp} (${CODE})` });
-  await page.getByLabel("Manufacturer").selectOption({ label: "PharmaCorp" });
-  await page.getByLabel("Expires").fill("2030-12-31");
-  await page.getByRole("button", { name: "Issue licence" }).click();
+  await licenceForm
+    .getByLabel("Drug type")
+    .selectOption({ label: `Ibuprofen 400mg ${stamp} (${CODE})` });
+  await licenceForm.getByLabel("Manufacturer").selectOption({ label: "PharmaCorp" });
+  await licenceForm.getByLabel("Expires").fill("2030-12-31");
+  await licenceForm.getByRole("button", { name: "Issue licence" }).click();
   await expect(page.getByText("Licence issued.")).toBeVisible();
 
   await page.screenshot({ path: "e2e/__shots__/1-government.png", fullPage: true });

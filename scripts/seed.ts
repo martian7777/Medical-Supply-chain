@@ -27,18 +27,18 @@ const PEOPLE = [
 
 async function main() {
   for (const p of PEOPLE) {
+    // Idempotent on the name unique index — a second run updates, never duplicates.
+    // (The original `on conflict do nothing` had no constraint to conflict on, so it
+    // silently created a fresh org every run; three runs made three PharmaCorps, and
+    // the manufacturer user ended up a member of all of them while the licence went to
+    // one. See migration 000800.)
     const [org] = await sql<{ org_id: string }[]>`
       insert into organizations (type, name)
       values (${p.type}::org_type, ${p.org})
-      on conflict do nothing
+      on conflict (name) do update set type = excluded.type
       returning org_id`;
 
-    const orgId =
-      org?.org_id ??
-      (
-        await sql<{ org_id: string }[]>`
-          select org_id from organizations where name = ${p.org}`
-      )[0]!.org_id;
+    const orgId = org!.org_id;
 
     // createUser fails if the address is taken; fall back to looking it up.
     const { data: created } = await admin.auth.admin.createUser({
@@ -61,6 +61,15 @@ async function main() {
       insert into memberships (user_id, org_id, role)
       values (${userId}, ${orgId}, ${p.role}::member_role)
       on conflict (user_id, org_id) do update set role = excluded.role`;
+
+    // Clear any enrolled TOTP factor so seeding always yields a clean starting state.
+    // Otherwise a second run leaves the account holding a factor whose secret nobody
+    // has — which locks the dev user out of every privileged action, and breaks the
+    // browser test that has to act as their authenticator.
+    const { data: full } = await admin.auth.admin.getUserById(userId);
+    for (const f of full.user?.factors ?? []) {
+      await admin.auth.admin.mfa.deleteFactor({ id: f.id, userId }).catch(() => {});
+    }
 
     console.log(`  ${p.email.padEnd(24)} ${p.type.padEnd(13)} ${p.org}`);
   }
