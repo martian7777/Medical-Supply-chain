@@ -6,6 +6,8 @@ import { sql } from "@/lib/db/client";
 /** GOV-7: the regulator reads everything. These are read-only, government-only. */
 
 export async function listOrganizations(actor: Actor) {
+  assertGovernment(actor);
+
   const rows = await sql<
     {
       org_id: string;

@@ -36,7 +36,7 @@ import postgres from "postgres";
  */
 
 declare global {
-  // eslint-disable-next-line no-var
+  // `var` is the only declaration form TypeScript accepts for augmenting globalThis.
   var __mswp_sql: postgres.Sql | undefined;
 }
 

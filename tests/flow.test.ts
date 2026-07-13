@@ -2,7 +2,6 @@ import { createClient } from "@supabase/supabase-js";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { sql } from "@/lib/db/client";
-import { DomainError } from "@/lib/domain/errors";
 import type { Actor } from "@/lib/domain/types";
 import { createBatch, listBatchUnits } from "@/lib/services/batches";
 import { dispenseUnit } from "@/lib/services/dispense";

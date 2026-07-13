@@ -27,6 +27,12 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
+      # Despite `lint` existing in package.json since the first commit, this step did not
+      # exist and no eslint.config.js did either — so `pnpm lint` had never once run, in
+      # CI or locally. Its first run found a missing assertGovernment() in oversight.ts.
+      - name: Lint
+        run: pnpm lint
+
       # Only the pure domain rules run here. The integration suite (tests/flow.test.ts)
       # skips itself without a DATABASE_URL, and we deliberately do not give CI one:
       # a shared cloud database that every branch writes to would be flaky, and putting
