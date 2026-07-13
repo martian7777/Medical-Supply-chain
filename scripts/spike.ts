@@ -121,9 +121,13 @@ async function seedFixtures() {
 }
 
 async function spikeBatchInsert(fx: Awaited<ReturnType<typeof seedFixtures>>) {
-  console.log("\n(b) 100,000-unit batch generation in a single statement");
+  console.log("\n(b) batch generation in a single statement");
 
-  const QTY = 100_000;
+  // Was 100,000, which measured 4.3s (~23,000 units/sec) — Postgres has plenty of
+  // headroom. The cap is now 5,000 because Vercel Hobby kills a function at 10s and
+  // 4.3s left no margin. Asking for more than the CHECK constraint allows would now
+  // (correctly) be rejected by the database.
+  const QTY = 5_000;
   const [batch] = await sql`
     insert into batches
       (drug_type_id, license_id, manufacturer_org_id, lot_no, quantity,
@@ -142,16 +146,16 @@ async function spikeBatchInsert(fx: Awaited<ReturnType<typeof seedFixtures>>) {
 
   if (inserted !== QTY) {
     fail("generated the requested number of units", `expected ${QTY}, got ${inserted}`);
-  } else if (elapsed > 10_000) {
-    // Vercel's default function ceiling is 60s (10s on hobby). If a full batch takes
-    // more than 10s we are too close to the edge and must move to a queue.
+  } else if (elapsed > 5_000) {
+    // Vercel Hobby kills a function at 10s. A full batch must finish with real margin,
+    // not just squeak in.
     fail(
-      "batch completed within the serverless budget",
-      `${QTY} units took ${elapsed}ms (>10s) — a job queue is required after all`,
+      "batch completed within the Hobby serverless budget",
+      `${QTY} units took ${elapsed}ms — too close to the 10s ceiling`,
     );
   } else {
     pass(
-      "100k units serialized in one transaction",
+      `${QTY.toLocaleString()} units serialized in one transaction`,
       `${elapsed}ms (${Math.round(QTY / (elapsed / 1000)).toLocaleString()} units/sec) — no queue needed`,
     );
   }
@@ -310,6 +314,30 @@ async function spikeAppendOnly(fx: Awaited<ReturnType<typeof seedFixtures>>) {
 
   if (delErr) pass("service_role cannot DELETE audit_log", delErr.code ?? "denied");
   else fail("service_role cannot DELETE audit_log", "LEAK: history is erasable");
+
+  // The one that actually matters. The APP does not talk to PostgREST — it holds a
+  // direct Postgres connection as the table owner, and an owner cannot be locked out
+  // of its own table with GRANT/REVOKE. If the trigger is missing, the two checks
+  // above are theatre.
+  try {
+    await sql`delete from audit_log where action = 'spike.test'`;
+    fail(
+      "the app's OWN direct connection cannot DELETE audit_log",
+      "LEAK: the application can erase its own audit trail",
+    );
+  } catch {
+    pass("the app's OWN direct connection cannot DELETE audit_log (trigger holds)");
+  }
+
+  try {
+    await sql`update audit_log set action = 'tampered' where action = 'spike.test'`;
+    fail(
+      "the app's OWN direct connection cannot UPDATE audit_log",
+      "LEAK: the application can rewrite its own audit trail",
+    );
+  } catch {
+    pass("the app's OWN direct connection cannot UPDATE audit_log (trigger holds)");
+  }
 }
 
 async function cleanup(stamp: number) {

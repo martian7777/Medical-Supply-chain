@@ -1,0 +1,433 @@
+openapi: 3.1.0
+
+info:
+  title: Medical Supply Web Project API
+  version: 1.0.0
+  description: |
+    Drug licensing, medicine unit serialization, custody transfer, and public
+    authenticity verification.
+
+    ## Authentication
+    All endpoints except `GET /verify/{unitId}` require a Supabase Auth session cookie.
+    The caller's organization and role are resolved server-side from their membership —
+    they are never taken from the request. A client cannot name the organization it is
+    acting for.
+
+    ## A note on 404
+    A request for a resource belonging to another organization returns **404, not 403**.
+    A 403 would confirm the resource exists, which is itself a disclosure. Refusals
+    about other organizations' data are indistinguishable from absence.
+
+    ## What this API never returns
+    No endpoint discloses the identity of a person who purchased medicine. Dispensing
+    records the pharmacy and the timestamp; the buyer is not modelled, not stored, and
+    not retrievable.
+
+servers:
+  - url: /api/v1
+
+tags:
+  - name: Government
+  - name: Manufacturer
+  - name: Pharmacy
+  - name: Public
+
+paths:
+  /organizations:
+    post:
+      tags: [Government]
+      summary: Register a manufacturer or pharmacy (GOV-6)
+      description: No self-registration exists. The regulator decides who is in the chain.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [type, name]
+              properties:
+                type: { type: string, enum: [manufacturer, pharmacy] }
+                name: { type: string, maxLength: 200 }
+                registrationNo: { type: string }
+      responses:
+        "200":
+          description: Registered
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  orgId: { type: string, format: uuid }
+        "404": { $ref: "#/components/responses/Refused" }
+
+  /drug-types:
+    get:
+      tags: [Government, Manufacturer, Pharmacy]
+      summary: The drug catalogue (readable by every participant)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/DrugType" }
+    post:
+      tags: [Government]
+      summary: Register a drug type (GOV-1)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code, name]
+              properties:
+                code: { type: string, maxLength: 64 }
+                name: { type: string, maxLength: 200 }
+                description: { type: string }
+      responses:
+        "200":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  drugTypeId: { type: string, format: uuid }
+        "409": { description: A drug type with this code already exists }
+
+  /licenses:
+    get:
+      tags: [Government, Manufacturer]
+      summary: List licences (Government sees all; a manufacturer sees only its own)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/License" }
+    post:
+      tags: [Government]
+      summary: Issue a production licence (GOV-3)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [drugTypeId, manufacturerOrgId, expiresAt]
+              properties:
+                drugTypeId: { type: string, format: uuid }
+                manufacturerOrgId: { type: string, format: uuid }
+                expiresAt: { type: string, format: date }
+      responses:
+        "200": { description: Issued }
+        "400": { description: Expiry is not in the future }
+
+  /licenses/{licenseId}/revoke:
+    post:
+      tags: [Government]
+      summary: Revoke a licence (GOV-4)
+      description: |
+        Prevents NEW production. Units already made under the licence remain valid —
+        they were lawfully produced. Recall is a separate action.
+      parameters: [{ $ref: "#/components/parameters/licenseId" }]
+      responses:
+        "200": { description: Revoked }
+        "409": { description: Already revoked }
+
+  /licenses/{licenseId}/prolong:
+    post:
+      tags: [Government]
+      summary: Extend a licence's expiry (GOV-5)
+      description: |
+        A revoked licence cannot be prolonged. Pushing the expiry out would otherwise
+        undo a revocation without an audit entry that says so.
+      parameters: [{ $ref: "#/components/parameters/licenseId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [newExpiresAt]
+              properties:
+                newExpiresAt: { type: string, format: date }
+      responses:
+        "200": { description: Prolonged }
+        "422": { description: Licence is revoked }
+
+  /batches:
+    get:
+      tags: [Manufacturer, Government]
+      summary: List batches
+      responses:
+        "200": { description: OK }
+    post:
+      tags: [Manufacturer]
+      summary: Create a batch and serialize its units (MFR-1, MFR-2, MFR-5)
+      description: |
+        One production run. The units are generated in-database in a single transaction:
+        either the whole batch exists, or none of it does. There is no partial batch.
+
+        The manufacturer's licence is checked here AND again inside Postgres at the
+        instant of insert, so a licence revoked in between still stops production.
+
+        `quantity` is capped at 5,000 — a deployment constraint (Vercel Hobby's 10s
+        function limit), not a database one. Postgres serializes 100,000 units in ~4s.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [drugTypeId, lotNo, quantity, expirationDate]
+              properties:
+                drugTypeId: { type: string, format: uuid }
+                lotNo: { type: string, maxLength: 64 }
+                quantity: { type: integer, minimum: 1, maximum: 5000 }
+                expirationDate: { type: string, format: date }
+      responses:
+        "200":
+          description: Batch created and units serialized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  batchId: { type: string, format: uuid }
+                  unitsCreated: { type: integer }
+        "422":
+          description: No valid licence for this drug type (MFR-5)
+
+  /batches/{batchId}/units:
+    get:
+      tags: [Manufacturer]
+      summary: The unit ids of a batch (paged) — this is what the QR export reads
+      parameters:
+        - { name: batchId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: limit, in: query, schema: { type: integer, default: 500, maximum: 1000 } }
+        - { name: offset, in: query, schema: { type: integer, default: 0 } }
+      responses:
+        "200": { description: OK }
+        "404": { $ref: "#/components/responses/Refused" }
+
+  /shipments:
+    get:
+      tags: [Manufacturer, Pharmacy]
+      summary: Inbox (`box=in`) or outbox (`box=out`)
+      parameters:
+        - { name: box, in: query, schema: { type: string, enum: [in, out], default: in } }
+      responses:
+        "200": { description: OK }
+    post:
+      tags: [Manufacturer, Pharmacy]
+      summary: Dispatch a shipment (MFR-4)
+      description: |
+        Phase one of custody transfer. Units become `in_transit` — ownership does NOT
+        move. The sender still owns them until the receiver accepts.
+
+        This is what stops a manufacturer booking phantom stock onto a pharmacy's ledger.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [toOrgId, unitIds]
+              properties:
+                toOrgId: { type: string, format: uuid }
+                unitIds:
+                  type: array
+                  items: { type: string, format: uuid }
+                  minItems: 1
+                note: { type: string }
+      responses:
+        "200": { description: Dispatched }
+        "404": { description: Some units are no longer available to ship }
+        "422": { description: A unit is not in a shippable state }
+
+  /shipments/{shipmentId}/resolve:
+    post:
+      tags: [Pharmacy]
+      summary: Accept, reject, or partially accept a shipment
+      description: |
+        Phase two. **The only moment ownership changes hands**, and only the addressee
+        may trigger it.
+
+        Omit `acceptedUnitIds` to accept the whole consignment. Name a subset to accept
+        that subset — the rest return to the sender, and the discrepancy is recorded.
+      parameters:
+        - { name: shipmentId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                acceptedUnitIds:
+                  type: array
+                  items: { type: string, format: uuid }
+                note: { type: string }
+      responses:
+        "200":
+          description: Resolved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [accepted, rejected, partially_accepted]
+                  accepted: { type: integer }
+                  rejected: { type: integer }
+        "404": { description: Not the addressee, or no such shipment }
+        "409": { description: Already resolved }
+
+  /inventory:
+    get:
+      tags: [Pharmacy, Manufacturer]
+      summary: What this organization currently holds (PH-3, MFR-6)
+      responses:
+        "200": { description: OK }
+
+  /units/{unitId}/dispense:
+    post:
+      tags: [Pharmacy]
+      summary: Dispense a unit to the public (PH-1) — terminal
+      description: |
+        Records the pharmacy and the moment. **It does not record the buyer**, and there
+        is no parameter by which one could be supplied.
+
+        Dispensing a unit twice is refused. That refusal is the system's primary
+        counterfeit signal: if a second box carries the same code, the code is cloned.
+      parameters:
+        - { name: unitId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: Dispensed }
+        "404": { description: No such unit, or not held by this pharmacy }
+        "422": { description: Already dispensed, expired, or recalled }
+
+  /verify/{unitId}:
+    get:
+      tags: [Public]
+      summary: Verify a medicine by its code (VER-1/2/3) — no authentication
+      description: |
+        The only unauthenticated endpoint. Rate-limited to 30 requests per minute per
+        caller, and CDN-cached for 60s.
+
+        Every scan is recorded — including scans of codes that were never issued, which
+        is the strongest counterfeit signal available. Callers are identified only by a
+        salted hash of their IP; no personal data is stored.
+
+        A malformed code returns `200 {"verdict":"not_found"}`, not `400`. A frightened
+        person holding a suspicious box should get a clear answer, not an error — and a
+        distinct error would let a caller tell "bad shape" from "not one of ours".
+      parameters:
+        - { name: unitId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: Verification result
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PublicVerification" }
+        "429":
+          description: Too many requests
+          headers:
+            Retry-After: { schema: { type: integer } }
+
+components:
+  parameters:
+    licenseId:
+      name: licenseId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+
+  responses:
+    Refused:
+      description: |
+        Not found — or found, but not yours. These are deliberately indistinguishable.
+
+  schemas:
+    DrugType:
+      type: object
+      properties:
+        drugTypeId: { type: string, format: uuid }
+        code: { type: string }
+        name: { type: string }
+        description: { type: string, nullable: true }
+
+    License:
+      type: object
+      properties:
+        licenseId: { type: string, format: uuid }
+        drugTypeId: { type: string, format: uuid }
+        manufacturerOrgId: { type: string, format: uuid }
+        status: { type: string, enum: [valid, revoked] }
+        expiresAt: { type: string, format: date }
+        usable:
+          type: boolean
+          description: |
+            Valid AND not expired, as of today. "Valid" and "usable" are different
+            questions, and the gap between them is exactly where unlicensed production
+            would slip through. Clients must not re-derive this.
+
+    PublicVerification:
+      type: object
+      description: |
+        Note what is absent: there is no owner, no buyer, no person of any kind. The
+        custody chain names organizations only.
+      properties:
+        verdict:
+          type: string
+          enum: [authentic, not_found, flagged]
+          description: |
+            `flagged` means the unit is real but its scan pattern is anomalous — the
+            signature of a code photocopied onto counterfeit packaging.
+        unitId: { type: string, format: uuid }
+        drug:
+          type: object
+          properties:
+            name: { type: string }
+            code: { type: string }
+        manufacturer:
+          type: object
+          properties:
+            name: { type: string }
+        expirationDate: { type: string, format: date }
+        status:
+          type: string
+          enum: [active, in_transit, dispensed, expired, recalled]
+        chain:
+          type: array
+          description: Custody by organization. Produced -> received -> dispensed.
+          items:
+            type: object
+            properties:
+              org: { type: string }
+              at: { type: string, format: date-time }
+              event: { type: string, enum: [produced, received, dispensed] }
+        dispensedBy:
+          type: object
+          description: The pharmacy and the moment. Never the person.
+          properties:
+            name: { type: string }
+            at: { type: string, format: date-time }
+        warnings:
+          type: array
+          items: { type: string }
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code: { type: string }
+            message: { type: string }
+            details: { type: object }

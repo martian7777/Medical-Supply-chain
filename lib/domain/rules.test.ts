@@ -14,6 +14,7 @@ import {
   validateDispatch,
   validateResolveShipment,
 } from "./shipments";
+import { MAX_BATCH_QUANTITY } from "./types";
 import type {
   Actor,
   Batch,
@@ -222,7 +223,7 @@ describe("CreateBatch (MFR-1, MFR-5) — the core anti-counterfeit rule", () => 
   const input = {
     drugTypeId: "drug-1",
     lotNo: "LOT-9",
-    quantity: 50_000,
+    quantity: 5_000,
     expirationDate: "2027-06-30",
   };
 
@@ -298,10 +299,16 @@ describe("CreateBatch (MFR-1, MFR-5) — the core anti-counterfeit rule", () => 
     );
   });
 
-  it("caps a batch at 100,000 units", () => {
+  it("caps a batch at MAX_BATCH_QUANTITY", () => {
+    expect(MAX_BATCH_QUANTITY).toBe(5_000); // must match the batches CHECK constraint
     expectDomainError(
       () =>
-        validateCreateBatch(mfr, { ...input, quantity: 100_001 }, license, TODAY),
+        validateCreateBatch(
+          mfr,
+          { ...input, quantity: MAX_BATCH_QUANTITY + 1 },
+          license,
+          TODAY,
+        ),
       "INVALID_INPUT",
     );
   });

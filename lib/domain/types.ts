@@ -87,5 +87,15 @@ export interface Shipment {
   status: ShipmentStatus;
 }
 
-/** Hard ceiling on one serialization run. Mirrors the CHECK constraint on `batches`. */
-export const MAX_BATCH_QUANTITY = 100_000;
+/**
+ * Hard ceiling on one serialization run. Mirrors the CHECK constraint on `batches`.
+ *
+ * Set by the deployment target, not by the database. The Phase-1 spike measured
+ * 100,000 units generated in 4.3s (~23,000 units/sec) — Postgres is not the limit.
+ * Vercel's HOBBY plan caps a function at 10s, and 4.3s of that is too close to the
+ * edge to be safe once network and auth overhead are added.
+ *
+ * On Vercel Pro (60s limit) this can go back to 100_000. Change it here AND in the
+ * batches CHECK constraint — the two must never disagree.
+ */
+export const MAX_BATCH_QUANTITY = 5_000;
